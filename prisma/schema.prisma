@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+  DINE_IN
+}
+
+enum FulfillmentTime {
+  ASAP
+  SCHEDULED
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+// ADMIN
+model User {
+  id       String @id @default(cuid())
+  name     String
+  email    String @unique
+  password String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// CATEGORY
+model Category {
+  id   String @id @default(cuid())
+  name String
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// PRODUCT
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal
+  image       String?
+  available   Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ORDER
+model Order {
+  id String @id @default(cuid())
+
+  // Customer information
+  customerName    String
+  customerPhone   String
+  customerAddress String?
+
+  // Order type
+  orderType OrderType
+
+  // When the customer wants the order
+  fulfillmentTime FulfillmentTime
+  scheduledAt     DateTime?
+
+  // Relevant mainly for dine-in
+  partySize Int?
+
+  // Extra customer instructions
+  notes String?
+
+  // Order status
+  status OrderStatus @default(PENDING)
+
+  // Payment
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Order total
+  total Decimal
+
+  // Items in this order
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ORDER ITEM
+model OrderItem {
+  id String @id @default(cuid())
+
+  quantity Int
+
+  // Price at the time the customer placed the order
+  price Decimal
+
+  orderId   String
+  productId String
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
