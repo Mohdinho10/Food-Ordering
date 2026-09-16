@@ -1,5 +1,5 @@
-import HomeLayout from "./components/HomeLayout";
-import { prisma } from "./lib/prisma";
+import HomeLayout from "../components/HomeLayout";
+import { prisma } from "../lib/prisma";
 
 export default async function Home() {
   const products = await prisma.product.findMany({
