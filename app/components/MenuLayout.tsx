@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
-import { useCartStore } from "../store/cartStore";
 import Image from "next/image";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+
+import { useCartStore } from "../store/cartStore";
 
 type Product = {
   id: string;
@@ -21,24 +22,35 @@ type Category = {
 
 type MenuClientProps = {
   categories: Category[];
+  activeCategoryId: string;
 };
 
-export default function MenuLayout({ categories }: MenuClientProps) {
-  const [activeCategory, setActiveCategory] = useState("All");
+export default function MenuLayout({
+  categories,
+  activeCategoryId,
+}: MenuClientProps) {
+  /*
+   * IMPORTANT:
+   * We build the navigation from ALL categories.
+   *
+   * Therefore, even when Pizza is selected,
+   * Burgers, Salads, Drinks, etc. remain visible.
+   */
+  const categoryNames = [
+    {
+      id: "ALL",
+      name: "All",
+    },
+    ...categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+    })),
+  ];
 
-  const categoryNames = ["All", ...categories.map((category) => category.name)];
-
-  const products = useMemo(() => {
-    if (activeCategory === "All") {
-      return categories.flatMap((category) => category.products);
-    }
-
-    const category = categories.find(
-      (category) => category.name === activeCategory,
-    );
-
-    return category?.products ?? [];
-  }, [activeCategory, categories]);
+  const activeCategory =
+    activeCategoryId === "ALL"
+      ? null
+      : categories.find((category) => category.id === activeCategoryId);
 
   return (
     <div className="bg-[#FAFAFA] text-[#1F1F1F]">
@@ -65,20 +77,26 @@ export default function MenuLayout({ categories }: MenuClientProps) {
         <div className="mx-auto max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-max items-center justify-center gap-2 py-4">
             {categoryNames.map((category) => {
-              const isActive = activeCategory === category;
+              const isActive = activeCategoryId === category.id;
+
+              const href =
+                category.id === "ALL"
+                  ? "/menu"
+                  : `/menu?category=${category.id}`;
 
               return (
-                <button
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
+                <Link
+                  key={category.id}
+                  href={href}
+                  scroll={false}
                   className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                     isActive
                       ? "bg-[#D41B27] text-white shadow-sm"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                   }`}
                 >
-                  {category}
-                </button>
+                  {category.name}
+                </Link>
               );
             })}
           </div>
@@ -87,9 +105,17 @@ export default function MenuLayout({ categories }: MenuClientProps) {
 
       {/* Products */}
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        {activeCategory === "All" ? (
+        {activeCategoryId === "ALL" ? (
+          /*
+           * ALL SELECTED
+           *
+           * Show every category that has
+           * at least one available product.
+           */
           categories.map((category) => {
-            if (category.products.length === 0) return null;
+            if (category.products.length === 0) {
+              return null;
+            }
 
             return (
               <section key={category.id} className="mb-16 last:mb-0">
@@ -104,30 +130,45 @@ export default function MenuLayout({ categories }: MenuClientProps) {
                     </h2>
                   </div>
 
-                  <button
-                    onClick={() => setActiveCategory(category.name)}
+                  <Link
+                    href={`/menu?category=${category.id}`}
+                    scroll={false}
                     className="hidden cursor-pointer text-sm font-semibold text-[#D41B27] transition hover:text-[#B91621] sm:block"
                   >
                     View all
-                  </button>
+                  </Link>
                 </div>
 
                 <ProductGrid products={category.products} />
               </section>
             );
           })
-        ) : (
+        ) : activeCategory ? (
+          /*
+           * SPECIFIC CATEGORY SELECTED
+           *
+           * Only the selected category's products
+           * are displayed.
+           *
+           * But ALL category buttons remain above.
+           */
           <section>
             <div className="mb-7">
               <p className="mb-1 text-sm font-medium text-[#D41B27]">Explore</p>
 
               <h2 className="text-2xl font-bold sm:text-3xl">
-                {activeCategory}
+                {activeCategory.name}
               </h2>
             </div>
 
-            <ProductGrid products={products} />
+            {activeCategory.products.length > 0 ? (
+              <ProductGrid products={activeCategory.products} />
+            ) : (
+              <EmptyCategory />
+            )}
           </section>
+        ) : (
+          <EmptyCategory />
         )}
       </main>
     </div>
@@ -139,7 +180,7 @@ function ProductGrid({ products }: { products: Product[] }) {
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {products?.map((product) => (
+      {products.map((product) => (
         <div
           key={product.id}
           className="group overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.10)]"
@@ -193,6 +234,27 @@ function ProductGrid({ products }: { products: Product[] }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function EmptyCategory() {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white px-6 py-16 text-center">
+      <h3 className="text-lg font-bold text-[#1F1F1F]">No items available</h3>
+
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+        There are currently no available foods in this category. Please check
+        another category.
+      </p>
+
+      <Link
+        href="/menu"
+        scroll={false}
+        className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621]"
+      >
+        View All Foods
+      </Link>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
 
 import { prisma } from "@/app/lib/prisma";
 import OrderStatusControl from "./OrderStatusControl";
+import PaymentStatusControl from "./PaymentStatusControl";
 
 type PageProps = {
   params: Promise<{
@@ -24,127 +25,103 @@ type PageProps = {
   }>;
 };
 
-function formatCurrency(value: number | string) {
+function formatCurrency(value: unknown) {
   return `TSh ${Number(value).toLocaleString("en-TZ")}`;
 }
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-TZ", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return date.toLocaleDateString("en-TZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
-function formatStatus(status: string) {
-  return status
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+function formatTime(date: Date) {
+  return date.toLocaleTimeString("en-TZ", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
-function formatOrderType(type: string) {
-  switch (type) {
-    case "DELIVERY":
-      return "Delivery";
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pending",
+    CONFIRMED: "Confirmed",
+    PREPARING: "Preparing",
+    READY: "Ready",
+    OUT_FOR_DELIVERY: "Out for Delivery",
+    DELIVERED: "Delivered",
+    CANCELLED: "Cancelled",
+  };
 
-    case "PICKUP":
-      return "Pickup";
-
-    case "DINE_IN":
-      return "Dine In";
-
-    default:
-      return type;
-  }
-}
-
-function formatFulfillmentTime(fulfillmentTime: string) {
-  switch (fulfillmentTime) {
-    case "ASAP":
-      return "As Soon As Possible";
-
-    case "SCHEDULED":
-      return "Scheduled";
-
-    default:
-      return fulfillmentTime;
-  }
-}
-
-function formatPaymentMethod(method: string) {
-  switch (method) {
-    case "CASH":
-      return "Cash";
-
-    case "MOBILE_MONEY":
-      return "Mobile Money";
-
-    case "CARD":
-      return "Card";
-
-    default:
-      return method;
-  }
-}
-
-function formatPaymentStatus(status: string) {
-  switch (status) {
-    case "PENDING":
-      return "Pending";
-
-    case "PAID":
-      return "Paid";
-
-    case "FAILED":
-      return "Failed";
-
-    default:
-      return status;
-  }
+  return labels[status] || status;
 }
 
 function getStatusClasses(status: string) {
-  switch (status) {
-    case "PENDING":
-      return "bg-[#FFF7E6] text-[#B7791F]";
+  const classes: Record<string, string> = {
+    PENDING: "bg-[#FFF7E6] text-[#B7791F]",
+    CONFIRMED: "bg-[#EDF4FF] text-[#2B6CB0]",
+    PREPARING: "bg-[#F3EEFF] text-[#6B46C1]",
+    READY: "bg-[#EDF8F1] text-[#2F855A]",
+    OUT_FOR_DELIVERY: "bg-[#EAF7FA] text-[#238A9E]",
+    DELIVERED: "bg-[#EDF8F1] text-[#2F855A]",
+    CANCELLED: "bg-[#FDEBEC] text-[#B91621]",
+  };
 
-    case "CONFIRMED":
-      return "bg-[#EEF5FF] text-[#2563EB]";
-
-    case "PREPARING":
-      return "bg-[#F3EEFF] text-[#7C3AED]";
-
-    case "READY":
-      return "bg-[#EDF8F1] text-[#2F855A]";
-
-    case "OUT_FOR_DELIVERY":
-      return "bg-[#EEF5FF] text-[#2563EB]";
-
-    case "DELIVERED":
-      return "bg-[#EDF8F1] text-[#2F855A]";
-
-    case "CANCELLED":
-      return "bg-[#FDEBEC] text-[#B91621]";
-
-    default:
-      return "bg-[#F5F5F5] text-[#666666]";
-  }
+  return classes[status] || "bg-[#F5F5F5] text-[#666666]";
 }
 
-function getOrderTypeIcon(type: string) {
-  switch (type) {
-    case "DELIVERY":
-      return <Bike className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />;
+function getOrderTypeLabel(orderType: string) {
+  const labels: Record<string, string> = {
+    DELIVERY: "Delivery",
+    PICKUP: "Pickup",
+    DINE_IN: "Dine In",
+  };
 
-    case "DINE_IN":
-      return <Users className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />;
+  return labels[orderType] || orderType;
+}
 
-    case "PICKUP":
-      return <Store className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />;
-
-    default:
-      return <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />;
+function getOrderTypeIcon(orderType: string) {
+  if (orderType === "DELIVERY") {
+    return <Bike className="h-4 w-4" />;
   }
+
+  if (orderType === "DINE_IN") {
+    return <Users className="h-4 w-4" />;
+  }
+
+  return <Store className="h-4 w-4" />;
+}
+
+function getPaymentMethodLabel(method: string) {
+  const labels: Record<string, string> = {
+    CASH: "Cash",
+    MOBILE_MONEY: "Mobile Money",
+    CARD: "Card",
+  };
+
+  return labels[method] || method;
+}
+
+function getPaymentStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pending",
+    PAID: "Paid",
+    FAILED: "Failed",
+  };
+
+  return labels[status] || status;
+}
+
+function getPaymentStatusClasses(status: string) {
+  const classes: Record<string, string> = {
+    PENDING: "bg-[#FFF7E6] text-[#B7791F]",
+    PAID: "bg-[#EDF8F1] text-[#2F855A]",
+    FAILED: "bg-[#FDEBEC] text-[#B91621]",
+  };
+
+  return classes[status] || "bg-[#F5F5F5] text-[#666666]";
 }
 
 export default async function OrderDetailsPage({ params }: PageProps) {
@@ -172,6 +149,11 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     notFound();
   }
 
+  const totalItems = order.items.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+
   const orderTypeIcon = getOrderTypeIcon(order.orderType);
 
   return (
@@ -180,7 +162,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
       <div className="mb-6">
         <Link
           href="/admin/orders"
-          className="mb-4 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-[#777777] transition hover:text-[#D41B27]"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#777777] transition hover:text-[#D41B27]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Orders
@@ -190,7 +172,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-[#1F1F1F]">
-                Order #{order.id.slice(-8).toUpperCase()}
+                Order #{order.id.slice(-6).toUpperCase()}
               </h1>
 
               <span
@@ -198,32 +180,40 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   order.status,
                 )}`}
               >
-                {formatStatus(order.status)}
+                {getStatusLabel(order.status)}
               </span>
             </div>
 
-            <p className="mt-2 text-sm text-[#999999]">
-              Placed on {formatDate(order.createdAt)}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#999999]">
+              <span className="flex items-center gap-1.5">
+                <CalendarClock className="h-4 w-4" />
+                {formatDate(order.createdAt)}
+              </span>
+
+              <span className="flex items-center gap-1.5">
+                <Clock3 className="h-4 w-4" />
+                {formatTime(order.createdAt)}
+              </span>
+            </div>
           </div>
 
-          <div className="text-left sm:text-right">
+          <div className="rounded-2xl bg-[#FDEBEC] px-5 py-3">
             <p className="text-xs font-medium text-[#999999]">Order Total</p>
 
-            <p className="mt-1 text-2xl font-bold text-[#D41B27]">
-              {formatCurrency(order.total.toString())}
+            <p className="mt-0.5 text-xl font-bold text-[#D41B27]">
+              {formatCurrency(order.total)}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Left column */}
+      {/* Main Grid */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Left Column */}
         <div className="space-y-6">
-          {/* Customer */}
+          {/* Customer Information */}
           <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-            <div className="flex items-center gap-3">
+            <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
                 <Users className="h-4 w-4 text-[#D41B27]" />
               </div>
@@ -239,36 +229,45 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl bg-[#FAFAFA] p-4">
-                <p className="text-xs font-medium text-[#999999]">
-                  Customer Name
-                </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-[#999999]">Name</p>
 
-                <p className="mt-1.5 text-sm font-semibold text-[#1F1F1F]">
+                <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
                   {order.customerName}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-[#FAFAFA] p-4">
-                <p className="text-xs font-medium text-[#999999]">
-                  Phone Number
-                </p>
+              <div>
+                <p className="text-xs font-medium text-[#999999]">Phone</p>
 
                 <a
                   href={`tel:${order.customerPhone}`}
-                  className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-[#D41B27] hover:underline"
+                  className="mt-1 flex items-center gap-2 text-sm font-semibold text-[#D41B27] hover:underline"
                 >
                   <Phone className="h-3.5 w-3.5" />
                   {order.customerPhone}
                 </a>
               </div>
+
+              {order.customerAddress && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-medium text-[#999999]">
+                    Delivery Address
+                  </p>
+
+                  <p className="mt-1 flex items-start gap-2 text-sm font-semibold text-[#1F1F1F]">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#D41B27]" />
+                    {order.customerAddress}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Order items */}
-          <section className="rounded-2xl border border-[#EEEEEE] bg-white">
-            <div className="border-b border-[#EEEEEE] p-5 sm:p-6">
+          {/* Order Items */}
+          <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
                   <UtensilsCrossed className="h-4 w-4 text-[#D41B27]" />
@@ -278,72 +277,59 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   <h2 className="font-bold text-[#1F1F1F]">Order Items</h2>
 
                   <p className="mt-0.5 text-xs text-[#999999]">
-                    {order.items.length}{" "}
-                    {order.items.length === 1 ? "item" : "different items"}
+                    {totalItems} {totalItems === 1 ? "item" : "items"}
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="divide-y divide-[#EEEEEE]">
-              {order.items.map((item) => {
-                const itemSubtotal = Number(item.price) * item.quantity;
-
-                return (
-                  <div key={item.id} className="flex gap-4 p-5 sm:p-6">
-                    {/* Product image */}
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F5F5F5]">
-                      {item.product.image ? (
-                        <Image
-                          src={item.product.image}
-                          alt={item.product.name}
-                          fill
-                          sizes="80px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <UtensilsCrossed className="h-6 w-6 text-[#CCCCCC]" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Product information */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h3 className="text-sm font-bold text-[#1F1F1F]">
-                            {item.product.name}
-                          </h3>
-
-                          <p className="mt-1 text-xs text-[#999999]">
-                            Quantity: {item.quantity}
-                          </p>
-                        </div>
-
-                        <p className="text-sm font-bold text-[#1F1F1F]">
-                          {formatCurrency(itemSubtotal)}
-                        </p>
+              {order.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#FAFAFA]">
+                    {item.product.image ? (
+                      <Image
+                        src={item.product.image}
+                        alt={item.product.name}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <UtensilsCrossed className="h-5 w-5 text-[#CCCCCC]" />
                       </div>
-
-                      <p className="mt-2 text-xs text-[#777777]">
-                        {formatCurrency(item.price.toString())} each
-                      </p>
-                    </div>
+                    )}
                   </div>
-                );
-              })}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[#1F1F1F]">
+                      {item.product.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#999999]">
+                      {item.quantity} × {formatCurrency(item.price)}
+                    </p>
+                  </div>
+
+                  <p className="text-sm font-bold text-[#1F1F1F]">
+                    {formatCurrency(Number(item.price) * item.quantity)}
+                  </p>
+                </div>
+              ))}
             </div>
 
-            {/* Total */}
-            <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] p-5 sm:p-6">
+            <div className="mt-5 border-t border-[#EEEEEE] pt-5">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-[#666666]">
+                <span className="text-sm font-medium text-[#777777]">
                   Total
                 </span>
 
-                <span className="text-lg font-bold text-[#D41B27]">
-                  {formatCurrency(order.total.toString())}
+                <span className="text-lg font-bold text-[#1F1F1F]">
+                  {formatCurrency(order.total)}
                 </span>
               </div>
             </div>
@@ -352,7 +338,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           {/* Notes */}
           {order.notes && (
             <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-              <div className="flex items-center gap-3">
+              <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
                   <Receipt className="h-4 w-4 text-[#D41B27]" />
                 </div>
@@ -366,8 +352,8 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-xl bg-[#FAFAFA] p-4">
-                <p className="text-sm leading-6 text-[#555555]">
+              <div className="rounded-xl bg-[#FAFAFA] px-4 py-3">
+                <p className="text-sm leading-6 text-[#666666]">
                   {order.notes}
                 </p>
               </div>
@@ -375,16 +361,16 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* Right column */}
+        {/* Right Column */}
         <div className="space-y-6">
-          {/* Update status */}
+          {/* Order Status */}
           <OrderStatusControl orderId={order.id} currentStatus={order.status} />
 
-          {/* Order information */}
+          {/* Order Information */}
           <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-            <div className="flex items-center gap-3">
+            <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
-                <Receipt className="h-4 w-4 text-[#D41B27]" />
+                {orderTypeIcon}
               </div>
 
               <div>
@@ -396,148 +382,128 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
-              {/* Order type */}
-              <div className="flex items-start gap-3">
-                {orderTypeIcon}
-
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs text-[#999999]">Order Type</p>
 
                   <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
-                    {formatOrderType(order.orderType)}
+                    {getOrderTypeLabel(order.orderType)}
                   </p>
+                </div>
+
+                <div className="rounded-lg bg-[#FAFAFA] p-2 text-[#777777]">
+                  {orderTypeIcon}
                 </div>
               </div>
 
-              {/* Fulfillment */}
-              <div className="flex items-start gap-3">
-                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />
+              <div className="border-t border-[#EEEEEE] pt-4">
+                <p className="text-xs text-[#999999]">Fulfillment</p>
 
-                <div>
-                  <p className="text-xs text-[#999999]">Fulfillment</p>
+                <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
+                  {order.fulfillmentTime === "ASAP"
+                    ? "As soon as possible"
+                    : "Scheduled"}
+                </p>
+
+                {order.scheduledAt && (
+                  <p className="mt-1 text-xs text-[#999999]">
+                    {formatDate(order.scheduledAt)} at{" "}
+                    {formatTime(order.scheduledAt)}
+                  </p>
+                )}
+              </div>
+
+              {order.partySize && (
+                <div className="border-t border-[#EEEEEE] pt-4">
+                  <p className="text-xs text-[#999999]">Party Size</p>
 
                   <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
-                    {formatFulfillmentTime(order.fulfillmentTime)}
+                    {order.partySize}{" "}
+                    {order.partySize === 1 ? "person" : "people"}
                   </p>
-                </div>
-              </div>
-
-              {/* Scheduled time */}
-              {order.fulfillmentTime === "SCHEDULED" && order.scheduledAt && (
-                <div className="flex items-start gap-3">
-                  <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />
-
-                  <div>
-                    <p className="text-xs text-[#999999]">Scheduled For</p>
-
-                    <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
-                      {formatDate(order.scheduledAt)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Party size */}
-              {order.orderType === "DINE_IN" && order.partySize && (
-                <div className="flex items-start gap-3">
-                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />
-
-                  <div>
-                    <p className="text-xs text-[#999999]">Party Size</p>
-
-                    <p className="mt-1 text-sm font-semibold text-[#1F1F1F]">
-                      {order.partySize}{" "}
-                      {order.partySize === 1 ? "person" : "people"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Delivery address */}
-              {order.orderType === "DELIVERY" && order.customerAddress && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />
-
-                  <div>
-                    <p className="text-xs text-[#999999]">Delivery Address</p>
-
-                    <p className="mt-1 text-sm font-semibold leading-5 text-[#1F1F1F]">
-                      {order.customerAddress}
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Payment */}
+          {/* Payment Information */}
           <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-            <div className="flex items-center gap-3">
+            <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
                 <CreditCard className="h-4 w-4 text-[#D41B27]" />
               </div>
 
               <div>
-                <h2 className="font-bold text-[#1F1F1F]">Payment</h2>
+                <h2 className="font-bold text-[#1F1F1F]">
+                  Payment Information
+                </h2>
 
                 <p className="mt-0.5 text-xs text-[#999999]">
-                  Payment information
+                  Payment method and status
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-xs text-[#999999]">Method</span>
+                <span className="text-sm text-[#777777]">Method</span>
 
                 <span className="text-sm font-semibold text-[#1F1F1F]">
-                  {formatPaymentMethod(order.paymentMethod)}
+                  {getPaymentMethodLabel(order.paymentMethod)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-xs text-[#999999]">Status</span>
+              <div className="flex items-center justify-between gap-4 border-t border-[#EEEEEE] pt-4">
+                <span className="text-sm text-[#777777]">Status</span>
 
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    order.paymentStatus === "PAID"
-                      ? "bg-[#EDF8F1] text-[#2F855A]"
-                      : order.paymentStatus === "FAILED"
-                        ? "bg-[#FDEBEC] text-[#B91621]"
-                        : "bg-[#FFF7E6] text-[#B7791F]"
-                  }`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${getPaymentStatusClasses(
+                    order.paymentStatus,
+                  )}`}
                 >
-                  {formatPaymentStatus(order.paymentStatus)}
+                  {getPaymentStatusLabel(order.paymentStatus)}
                 </span>
               </div>
 
               <div className="border-t border-[#EEEEEE] pt-4">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm font-semibold text-[#666666]">
-                    Order Total
-                  </span>
+                <p className="text-xs text-[#999999]">Amount</p>
 
-                  <span className="text-base font-bold text-[#1F1F1F]">
-                    {formatCurrency(order.total.toString())}
-                  </span>
-                </div>
+                <p className="mt-1 text-lg font-bold text-[#1F1F1F]">
+                  {formatCurrency(order.total)}
+                </p>
               </div>
+            </div>
+
+            {/* Payment Status Control */}
+            <div className="mt-5 border-t border-[#EEEEEE] pt-5">
+              <PaymentStatusControl
+                orderId={order.id}
+                currentStatus={order.paymentStatus}
+              />
             </div>
           </section>
 
           {/* Order ID */}
           <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-            <p className="text-xs font-medium text-[#999999]">Order ID</p>
+            <div className="flex items-start gap-3">
+              <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-[#999999]" />
 
-            <p className="mt-2 break-all font-mono text-xs text-[#666666]">
-              {order.id}
-            </p>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#999999]">Order ID</p>
 
-            <div className="mt-4 flex items-center gap-2 text-xs text-[#999999]">
-              <CalendarClock className="h-3.5 w-3.5" />
+                <p className="mt-1 break-all font-mono text-xs text-[#666666]">
+                  {order.id}
+                </p>
 
-              <span>Last updated: {formatDate(order.updatedAt)}</span>
+                <p className="mt-4 text-xs font-medium text-[#999999]">
+                  Last Updated
+                </p>
+
+                <p className="mt-1 text-xs text-[#666666]">
+                  {formatDate(order.updatedAt)} at {formatTime(order.updatedAt)}
+                </p>
+              </div>
             </div>
           </section>
         </div>
