@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
+import OrderRealtimeListener from "./OrderRealtimeListener";
 
 type OrderPageProps = {
   params: Promise<{
@@ -126,6 +127,10 @@ export default async function OrderPage({ params }: OrderPageProps) {
 
   return (
     <main className="min-h-[70vh] bg-[#FAFAFA]">
+      {/* ==================== REALTIME LISTENER ==================== */}
+
+      <OrderRealtimeListener orderId={orderId} />
+
       {/* ==================== PAGE HEADER ==================== */}
 
       <section className="border-b border-[#EEEEEE] bg-white">

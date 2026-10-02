@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/app/lib/prisma";
+
+import OrderRealtimeListener from "./OrderRealtimeListener";
 import OrderStatusControl from "./OrderStatusControl";
 import PaymentStatusControl from "./PaymentStatusControl";
 
@@ -158,6 +160,9 @@ export default async function OrderDetailsPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl">
+      {/* Realtime order updates */}
+      <OrderRealtimeListener orderId={orderId} />
+
       {/* Header */}
       <div className="mb-6">
         <Link

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/app/lib/prisma";
+import DashboardRealtimeListener from "./DashboardRealtimeListener";
 
 export default async function AdminDashboardPage() {
   const startOfToday = new Date();
@@ -139,6 +140,9 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
+      {/* Realtime order listener */}
+      <DashboardRealtimeListener />
+
       {/* Page Header */}
       <div className="mb-8">
         <div>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/app/lib/prisma";
 import OrdersFilters from "./OrderFilters";
+import OrdersRealtimeListener from "./OrdersRealtimeListener";
 
 const validStatuses = [
   "PENDING",
@@ -315,6 +316,9 @@ export default async function AdminOrdersPage({
 
   return (
     <div className="mx-auto max-w-7xl">
+      {/* Realtime order listener */}
+      <OrdersRealtimeListener />
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-[#1F1F1F]">

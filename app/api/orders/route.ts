@@ -1,3 +1,4 @@
+import Ably from "ably";
 import { prisma } from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -60,10 +61,6 @@ export async function POST(request: Request) {
     }
 
     // Tanzania mobile number validation.
-    // Accepts numbers such as:
-    // +255700123456
-    // +255710123456
-    // +255650123456
     if (!/^\+255[67]\d{8}$/.test(normalizedPhone)) {
       return NextResponse.json(
         {
@@ -180,8 +177,6 @@ export async function POST(request: Request) {
         customerName: customerName.trim(),
 
         // Store the normalized phone number.
-        // Example:
-        // +255 700 123 456 -> +255700123456
         customerPhone: normalizedPhone,
 
         customerAddress:
@@ -215,6 +210,31 @@ export async function POST(request: Request) {
         },
       },
     });
+
+    // ==================== PUBLISH REALTIME EVENT ====================
+
+    const ablyApiKey = process.env.ABLY_API_KEY;
+
+    if (!ablyApiKey) {
+      console.error("ABLY_API_KEY is not configured.");
+    } else {
+      try {
+        const ably = new Ably.Rest({
+          key: ablyApiKey,
+        });
+
+        const channel = ably.channels.get("restaurant:orders");
+
+        await channel.publish("order.created", {
+          orderId: order.id,
+        });
+
+        console.log("Realtime order.created event published:", order.id);
+      } catch (ablyError) {
+        // Do NOT fail the customer's order if realtime publishing fails.
+        console.error("Ably order.created error:", ablyError);
+      }
+    }
 
     // ==================== SUCCESS ====================
 
