@@ -134,28 +134,44 @@ export default function AddFoodForm({ categories }: Props) {
 
             <div className="p-6">
               {imagePreview ? (
-                <div className="relative overflow-hidden rounded-2xl border border-[#EEEEEE] bg-[#FAFAFA]">
-                  <div className="relative aspect-[16/9] w-full">
-                    <Image
-                      src={imagePreview}
-                      alt="Food preview"
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
+                <div className="rounded-2xl border border-[#EEEEEE] bg-[#FAFAFA] p-4">
+                  {/* Image Preview */}
+                  <div className="flex justify-center">
+                    <div className="relative aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white shadow-sm">
+                      <Image
+                        src={imagePreview}
+                        alt="Food preview"
+                        fill
+                        unoptimized
+                        className="object-contain p-3"
+                        sizes="280px"
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-[#EEEEEE] bg-white px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm text-[#666666]">
-                      <ImagePlus className="h-4 w-4 text-[#D41B27]" />
-                      Image selected
+                  {/* Preview Info */}
+                  <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[#EEEEEE] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FDEBEC]">
+                        <ImagePlus className="h-4 w-4 text-[#D41B27]" />
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-semibold text-[#444444]">
+                          Image selected
+                        </p>
+
+                        <p className="text-xs text-[#999999]">
+                          Ready to upload
+                        </p>
+                      </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={removeImage}
                       disabled={isPending}
-                      className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#777777] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#777777] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove
@@ -259,6 +275,7 @@ export default function AddFoodForm({ categories }: Props) {
 
               {/* Price + Category */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* Price */}
                 <div>
                   <label
                     htmlFor="price"
@@ -286,6 +303,7 @@ export default function AddFoodForm({ categories }: Props) {
                   </div>
                 </div>
 
+                {/* Category */}
                 <div>
                   <label
                     htmlFor="categoryId"

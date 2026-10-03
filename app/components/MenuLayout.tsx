@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { useCartStore } from "../store/cartStore";
 
@@ -29,12 +31,15 @@ export default function MenuLayout({
   categories,
   activeCategoryId,
 }: MenuClientProps) {
+  const router = useRouter();
+
   /*
-   * IMPORTANT:
-   * We build the navigation from ALL categories.
+   * The categories received here contain ONLY categories
+   * that currently have at least one available product.
    *
-   * Therefore, even when Pizza is selected,
-   * Burgers, Salads, Drinks, etc. remain visible.
+   * Therefore, if the last available food in a category
+   * becomes unavailable, that category disappears from
+   * this list after the realtime refresh.
    */
   const categoryNames = [
     {
@@ -51,6 +56,20 @@ export default function MenuLayout({
     activeCategoryId === "ALL"
       ? null
       : categories.find((category) => category.id === activeCategoryId);
+
+  /*
+   * If the customer is viewing a category that no longer
+   * has any available foods, automatically return them
+   * to the All menu.
+   *
+   * This can happen after a realtime availability update
+   * removes the last available food from the category.
+   */
+  useEffect(() => {
+    if (activeCategoryId !== "ALL" && !activeCategory) {
+      router.replace("/menu", { scroll: false });
+    }
+  }, [activeCategoryId, activeCategory, router]);
 
   return (
     <div className="bg-[#FAFAFA] text-[#1F1F1F]">
@@ -109,15 +128,11 @@ export default function MenuLayout({
           /*
            * ALL SELECTED
            *
-           * Show every category that has
-           * at least one available product.
+           * Only categories containing available foods
+           * are displayed.
            */
-          categories.map((category) => {
-            if (category.products.length === 0) {
-              return null;
-            }
-
-            return (
+          categories.length > 0 ? (
+            categories.map((category) => (
               <section key={category.id} className="mb-16 last:mb-0">
                 <div className="mb-7 flex items-end justify-between">
                   <div>
@@ -141,16 +156,16 @@ export default function MenuLayout({
 
                 <ProductGrid products={category.products} />
               </section>
-            );
-          })
+            ))
+          ) : (
+            <EmptyMenu />
+          )
         ) : activeCategory ? (
           /*
            * SPECIFIC CATEGORY SELECTED
            *
            * Only the selected category's products
            * are displayed.
-           *
-           * But ALL category buttons remain above.
            */
           <section>
             <div className="mb-7">
@@ -161,13 +176,13 @@ export default function MenuLayout({
               </h2>
             </div>
 
-            {activeCategory.products.length > 0 ? (
-              <ProductGrid products={activeCategory.products} />
-            ) : (
-              <EmptyCategory />
-            )}
+            <ProductGrid products={activeCategory.products} />
           </section>
         ) : (
+          /*
+           * Temporary fallback while the router redirects
+           * to /menu because the selected category disappeared.
+           */
           <EmptyCategory />
         )}
       </main>
@@ -255,6 +270,19 @@ function EmptyCategory() {
       >
         View All Foods
       </Link>
+    </div>
+  );
+}
+
+function EmptyMenu() {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white px-6 py-16 text-center">
+      <h3 className="text-lg font-bold text-[#1F1F1F]">No foods available</h3>
+
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+        There are currently no foods available on the menu. Please check again
+        later.
+      </p>
     </div>
   );
 }

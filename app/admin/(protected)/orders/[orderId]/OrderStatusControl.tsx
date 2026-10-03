@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Check, ChevronDown, Clock3, Loader2, X } from "lucide-react";
 import { updateOrderStatus } from "@/app/actions/admin-order";
 
@@ -57,6 +57,20 @@ export default function OrderStatusControl({ orderId, currentStatus }: Props) {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  /*
+   * Automatically hide success/error messages after 3 seconds.
+   */
+  useEffect(() => {
+    if (!message && !error) return;
+
+    const timer = setTimeout(() => {
+      setMessage("");
+      setError("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [message, error]);
 
   const currentOption = statusOptions.find(
     (option) => option.value === selectedStatus,

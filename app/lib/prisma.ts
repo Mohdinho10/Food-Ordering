@@ -1,7 +1,7 @@
-import "server-only";
+import "dotenv/config";
 
-import { PrismaClient } from "@/app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/app/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -15,6 +15,7 @@ if (!connectionString) {
 
 const adapter = new PrismaPg({
   connectionString,
+  connectionTimeoutMillis: 15000,
 });
 
 export const prisma =

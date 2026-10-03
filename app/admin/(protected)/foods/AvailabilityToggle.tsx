@@ -15,9 +15,14 @@ export default function AvailabilityToggle({
   initialAvailable,
 }: Props) {
   const [isPending, startTransition] = useTransition();
-
-  const [available, setAvailable] = useState(initialAvailable);
+  const [optimisticAvailable, setOptimisticAvailable] = useState<
+    boolean | null
+  >(null);
   const [error, setError] = useState("");
+
+  // Use the optimistic value while the update is happening.
+  // Otherwise use the value coming from the Server Component.
+  const available = optimisticAvailable ?? initialAvailable;
 
   function handleToggle() {
     if (isPending) {
@@ -28,15 +33,23 @@ export default function AvailabilityToggle({
 
     const newAvailability = !available;
 
+    // Immediately update the UI.
+    setOptimisticAvailable(newAvailability);
+
     startTransition(async () => {
       const result = await updateFoodAvailability(foodId, newAvailability);
 
       if (!result.success) {
+        // Revert the optimistic UI if the server update fails.
+        setOptimisticAvailable(null);
         setError(result.error || "Unable to update availability.");
         return;
       }
 
-      setAvailable(newAvailability);
+      // Clear the local optimistic value.
+      // The next router.refresh() will provide the
+      // updated initialAvailable value from the database.
+      setOptimisticAvailable(null);
     });
   }
 

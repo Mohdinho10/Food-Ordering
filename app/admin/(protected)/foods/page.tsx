@@ -12,6 +12,8 @@ import {
 
 import { prisma } from "@/app/lib/prisma";
 import AvailabilityToggle from "./AvailabilityToggle";
+import DeleteFoodButton from "./DeleteFoodButton";
+import FoodsRealtimeListener from "./FoodsRealtimeListener";
 
 type PageProps = {
   searchParams: Promise<{
@@ -79,11 +81,13 @@ export default async function FoodsPage({ searchParams }: PageProps) {
 
   const [totalFoods, availableFoods, unavailableFoods] = await Promise.all([
     prisma.product.count(),
+
     prisma.product.count({
       where: {
         available: true,
       },
     }),
+
     prisma.product.count({
       where: {
         available: false,
@@ -93,6 +97,9 @@ export default async function FoodsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl">
+      {/* Realtime listener */}
+      <FoodsRealtimeListener />
+
       {/* Page Header */}
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -126,6 +133,7 @@ export default async function FoodsPage({ searchParams }: PageProps) {
 
       {/* Statistics */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* Total Foods */}
         <div className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -142,6 +150,7 @@ export default async function FoodsPage({ searchParams }: PageProps) {
           </div>
         </div>
 
+        {/* Available */}
         <div className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -158,6 +167,7 @@ export default async function FoodsPage({ searchParams }: PageProps) {
           </div>
         </div>
 
+        {/* Unavailable */}
         <div className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -225,7 +235,7 @@ export default async function FoodsPage({ searchParams }: PageProps) {
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-x-hidden md:block">
           {foods.length > 0 ? (
             <table className="w-full">
               <thead>
@@ -260,14 +270,15 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] shadow-inner ring-1 ring-black/5">
+                        {/* Food Image */}
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] ring-1 ring-black/5">
                           {food.image ? (
                             <Image
                               src={food.image}
                               alt={food.name}
                               fill
-                              sizes="56px"
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              sizes="64px"
+                              className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center bg-[#FAFAFA]">
@@ -299,7 +310,7 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-[#1F1F1F]">
+                      <span className="whitespace-nowrap text-sm font-bold text-[#1F1F1F]">
                         {formatCurrency(food.price)}
                       </span>
                     </td>
@@ -311,14 +322,21 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                       />
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/admin/foods/${food.id}/edit`}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        Edit
-                      </Link>
+                    <td className="px-6 py-4">
+                      <div className="flex items-start justify-end gap-2">
+                        <Link
+                          href={`/admin/foods/${food.id}/edit`}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          Edit
+                        </Link>
+
+                        <DeleteFoodButton
+                          foodId={food.id}
+                          foodName={food.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -335,14 +353,15 @@ export default async function FoodsPage({ searchParams }: PageProps) {
             foods.map((food) => (
               <div key={food.id} className="group p-5">
                 <div className="flex gap-4">
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] shadow-inner ring-1 ring-black/5">
+                  {/* Food Image */}
+                  <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] ring-1 ring-black/5">
                     {food.image ? (
                       <Image
                         src={food.image}
                         alt={food.name}
                         fill
-                        sizes="80px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="96px"
+                        className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[#FAFAFA]">
@@ -365,24 +384,31 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                         </p>
                       </div>
 
-                      <p className="shrink-0 text-sm font-bold text-[#1F1F1F]">
+                      <p className="shrink-0 whitespace-nowrap text-sm font-bold text-[#1F1F1F]">
                         {formatCurrency(food.price)}
                       </p>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="mt-4 flex items-start justify-between gap-3">
                       <AvailabilityToggle
                         foodId={food.id}
                         initialAvailable={food.available}
                       />
 
-                      <Link
-                        href={`/admin/foods/${food.id}/edit`}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        Edit
-                      </Link>
+                      <div className="flex flex-wrap items-start justify-end gap-2">
+                        <Link
+                          href={`/admin/foods/${food.id}/edit`}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          Edit
+                        </Link>
+
+                        <DeleteFoodButton
+                          foodId={food.id}
+                          foodName={food.name}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

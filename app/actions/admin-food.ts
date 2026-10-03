@@ -1,5 +1,6 @@
 "use server";
 
+import Ably from "ably";
 import { auth } from "@/app/auth";
 import { prisma } from "@/app/lib/prisma";
 import cloudinary from "@/app/lib/cloudinary";
@@ -67,6 +68,39 @@ async function deleteCloudinaryImage(imageUrl: string | null) {
     });
   } catch (error) {
     console.error("CLOUDINARY DELETE ERROR:", error);
+  }
+}
+
+// ----------------------------------------
+// Ably realtime helper
+// ----------------------------------------
+
+async function publishFoodEvent(
+  event: "food.created" | "food.updated" | "food.deleted",
+  foodId: string,
+) {
+  const ablyApiKey = process.env.ABLY_API_KEY;
+
+  if (!ablyApiKey) {
+    console.error("ABLY_API_KEY is not configured.");
+    return;
+  }
+
+  try {
+    const ably = new Ably.Rest({
+      key: ablyApiKey,
+    });
+
+    const channel = ably.channels.get("restaurant:menu");
+
+    await channel.publish(event, {
+      foodId,
+    });
+
+    console.log(`Realtime ${event} event published:`, foodId);
+  } catch (error) {
+    // Realtime failure should never make the database operation fail.
+    console.error(`Ably ${event} error:`, error);
   }
 }
 
@@ -220,7 +254,7 @@ export async function createFood(formData: FormData) {
     // Create food
     // -------------------------
 
-    await prisma.product.create({
+    const food = await prisma.product.create({
       data: {
         name,
         description: description || null,
@@ -229,9 +263,18 @@ export async function createFood(formData: FormData) {
         categoryId,
         available: true,
       },
+      select: {
+        id: true,
+      },
     });
 
     revalidatePath("/admin/foods");
+
+    // -------------------------
+    // Realtime event
+    // -------------------------
+
+    await publishFoodEvent("food.created", food.id);
   } catch (error) {
     console.error("CREATE FOOD ERROR:", error);
 
@@ -444,6 +487,12 @@ export async function updateFood(foodId: string, formData: FormData) {
 
     revalidatePath("/admin/foods");
     revalidatePath(`/admin/foods/${foodId}/edit`);
+
+    // -------------------------
+    // Realtime event
+    // -------------------------
+
+    await publishFoodEvent("food.updated", foodId);
   } catch (error) {
     console.error("UPDATE FOOD ERROR:", error);
 
@@ -456,6 +505,7 @@ export async function updateFood(foodId: string, formData: FormData) {
   redirect("/admin/foods");
 }
 
+// ----------------------------------------
 // Update Food Availability
 // ----------------------------------------
 
@@ -508,6 +558,12 @@ export async function updateFoodAvailability(
 
     revalidatePath("/admin/foods");
 
+    // -------------------------
+    // Realtime event
+    // -------------------------
+
+    await publishFoodEvent("food.updated", foodId);
+
     return {
       success: true,
     };
@@ -517,6 +573,100 @@ export async function updateFoodAvailability(
     return {
       success: false,
       error: "Something went wrong while updating food availability.",
+    };
+  }
+}
+
+// ----------------------------------------
+// Delete Food
+// ----------------------------------------
+
+export async function deleteFood(foodId: string) {
+  const session = await auth();
+
+  if (!session?.user) {
+    return {
+      success: false,
+      error: "Unauthorized.",
+    };
+  }
+
+  // -------------------------
+  // Find food and check
+  // whether it has been ordered
+  // -------------------------
+
+  const food = await prisma.product.findUnique({
+    where: {
+      id: foodId,
+    },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      _count: {
+        select: {
+          orderItems: true,
+        },
+      },
+    },
+  });
+
+  if (!food) {
+    return {
+      success: false,
+      error: "Food not found.",
+    };
+  }
+
+  // -------------------------
+  // Protect historical orders
+  // -------------------------
+
+  if (food._count.orderItems > 0) {
+    return {
+      success: false,
+      error:
+        "This food cannot be permanently deleted because it has already been used in an order. Mark it as unavailable instead.",
+    };
+  }
+
+  try {
+    // -------------------------
+    // Delete food from database
+    // -------------------------
+
+    await prisma.product.delete({
+      where: {
+        id: foodId,
+      },
+    });
+
+    // -------------------------
+    // Delete image from Cloudinary
+    // -------------------------
+
+    if (food.image) {
+      await deleteCloudinaryImage(food.image);
+    }
+
+    revalidatePath("/admin/foods");
+
+    // -------------------------
+    // Realtime event
+    // -------------------------
+
+    await publishFoodEvent("food.deleted", foodId);
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("DELETE FOOD ERROR:", error);
+
+    return {
+      success: false,
+      error: "Something went wrong while deleting the food.",
     };
   }
 }
