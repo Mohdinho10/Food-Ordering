@@ -205,7 +205,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           <div className="rounded-2xl bg-[#FDEBEC] px-5 py-3">
             <p className="text-xs font-medium text-[#999999]">Order Total</p>
 
-            <p className="mt-0.5 text-xl font-bold text-[#D41B27]">
+            <p className="mt-0.5 whitespace-nowrap text-xl font-bold text-[#D41B27]">
               {formatCurrency(order.total)}
             </p>
           </div>
@@ -294,17 +294,17 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   key={item.id}
                   className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
                 >
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#FAFAFA]">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] ring-1 ring-black/5">
                     {item.product.image ? (
                       <Image
                         src={item.product.image}
                         alt={item.product.name}
                         fill
                         sizes="64px"
-                        className="object-cover"
+                        className="object-contain p-1.5 transition-transform duration-300 hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center">
+                      <div className="flex h-full w-full items-center justify-center bg-[#FAFAFA]">
                         <UtensilsCrossed className="h-5 w-5 text-[#CCCCCC]" />
                       </div>
                     )}
@@ -320,7 +320,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                     </p>
                   </div>
 
-                  <p className="text-sm font-bold text-[#1F1F1F]">
+                  <p className="shrink-0 whitespace-nowrap text-sm font-bold text-[#1F1F1F]">
                     {formatCurrency(Number(item.price) * item.quantity)}
                   </p>
                 </div>
@@ -333,7 +333,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   Total
                 </span>
 
-                <span className="text-lg font-bold text-[#1F1F1F]">
+                <span className="whitespace-nowrap text-lg font-bold text-[#1F1F1F]">
                   {formatCurrency(order.total)}
                 </span>
               </div>
@@ -474,7 +474,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               <div className="border-t border-[#EEEEEE] pt-4">
                 <p className="text-xs text-[#999999]">Amount</p>
 
-                <p className="mt-1 text-lg font-bold text-[#1F1F1F]">
+                <p className="mt-1 whitespace-nowrap text-lg font-bold text-[#1F1F1F]">
                   {formatCurrency(order.total)}
                 </p>
               </div>
