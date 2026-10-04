@@ -2,9 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LockKeyhole, LogIn, Mail, Utensils } from "lucide-react";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +36,7 @@ export default function AdminLoginPage() {
       }
 
       if (result?.ok) {
-        window.location.href = "/admin/dashboard";
+        router.push("/admin/dashboard");
         return;
       }
 
@@ -92,7 +95,7 @@ export default function AdminLoginPage() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="admin@example.com"
-                    className="w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    className="[color-scheme:light] w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
                     required
                   />
                 </div>
@@ -117,7 +120,7 @@ export default function AdminLoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter your password"
-                    className="w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-12 text-sm outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    className="[color-scheme:light] w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-12 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
                     required
                   />
 

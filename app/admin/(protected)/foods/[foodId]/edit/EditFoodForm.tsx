@@ -273,7 +273,7 @@ export default function EditFoodForm({ food, categories }: Props) {
                   </label>
 
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#999999]">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap text-sm font-medium text-[#999999]">
                       TSh
                     </span>
 
@@ -337,13 +337,13 @@ export default function EditFoodForm({ food, categories }: Props) {
 
             <div className="p-6">
               {imagePreview ? (
-                <div className="relative overflow-hidden rounded-2xl border border-[#EEEEEE] bg-[#FAFAFA]">
+                <div className="relative overflow-hidden rounded-2xl border border-[#EEEEEE] bg-[#F7F7F7]">
                   <div className="relative aspect-[16/9] w-full sm:aspect-[2/1]">
                     <Image
                       src={imagePreview}
                       alt={name || "Food image"}
                       fill
-                      className="object-cover"
+                      className="object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
                       sizes="(max-width: 640px) 100vw, 768px"
                     />
                   </div>
