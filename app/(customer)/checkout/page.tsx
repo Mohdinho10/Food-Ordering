@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
 
   const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("+255 ");
   const [customerAddress, setCustomerAddress] = useState("");
   const [partySize, setPartySize] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -47,6 +47,20 @@ export default function CheckoutPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "");
+
+    let localNumber = digits;
+
+    if (localNumber.startsWith("255")) {
+      localNumber = localNumber.slice(3);
+    }
+
+    localNumber = localNumber.slice(0, 9);
+
+    setCustomerPhone(`+255 ${localNumber}`);
+  }
 
   const subtotal = items.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -60,9 +74,6 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setError("");
 
-    // Normalize the phone number by removing spaces.
-    // Example:
-    // +255 700 123 456 -> +255700123456
     const normalizedPhone = customerPhone.replace(/\s+/g, "");
 
     // Client-side validation
@@ -71,19 +82,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!normalizedPhone) {
+    if (!normalizedPhone || normalizedPhone === "+255") {
       setError("Please enter your phone number.");
       return;
     }
 
     // Tanzania mobile number validation.
-    // Accepts numbers such as:
-    // +255700123456
-    // +255710123456
-    // +255650123456
     if (!/^\+255[67]\d{8}$/.test(normalizedPhone)) {
       setError(
-        "Please enter a valid Tanzanian phone number starting with +255, e.g. +255 700 123 456.",
+        "Please enter a valid Tanzanian phone number, e.g. +255 700 123 456.",
       );
       return;
     }
@@ -141,11 +148,8 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Failed to place your order.");
       }
 
-      // Clear the cart after the order has
-      // successfully been created in the database.
       clearCart();
 
-      // Redirect to the order page.
       router.push(`/order/${data.orderId}`);
     } catch (error) {
       console.error("Place order error:", error);
@@ -288,7 +292,9 @@ export default function CheckoutPage() {
                       id="customerPhone"
                       type="tel"
                       value={customerPhone}
-                      onChange={(event) => setCustomerPhone(event.target.value)}
+                      onChange={(event) =>
+                        handlePhoneChange(event.target.value)
+                      }
                       placeholder="+255 700 000 000"
                       inputMode="tel"
                       autoComplete="tel"
@@ -297,7 +303,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <p className="mt-2 text-xs text-[#999999]">
-                    Enter your phone number starting with +255
+                    +255 is already included. Enter the 9 digits after it.
                   </p>
                 </div>
               </div>

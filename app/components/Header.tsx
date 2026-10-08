@@ -142,7 +142,7 @@ export default function Header() {
       {flyingImage && (
         <div
           key={flyingImage.id}
-          className="pointer-events-none fixed z-[100] overflow-hidden rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.22)]"
+          className="pointer-events-none fixed z-100 overflow-hidden rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.22)]"
           style={{
             left: flyingImage.startX,
             top: flyingImage.startY,
@@ -365,7 +365,7 @@ export default function Header() {
 
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[60] bg-black/50 lg:hidden"
+          className="fixed inset-0 z-60 bg-black/50 lg:hidden"
           onClick={closeMobileMenu}
         />
       )}
@@ -373,7 +373,7 @@ export default function Header() {
       {/* ==================== MOBILE SIDEBAR ==================== */}
 
       <aside
-        className={`fixed right-0 top-0 z-[70] flex h-full w-[min(88vw,360px)] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed right-0 top-0 z-70 flex h-full w-[min(88vw,360px)] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
           mobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

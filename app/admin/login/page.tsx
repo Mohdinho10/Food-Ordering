@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+255 ");
   const [password, setPassword] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -28,15 +28,39 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "");
+
+    let localNumber = digits;
+
+    if (localNumber.startsWith("255")) {
+      localNumber = localNumber.slice(3);
+    }
+
+    localNumber = localNumber.slice(0, 9);
+
+    setPhone(`+255 ${localNumber}`);
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
     setIsLoading(true);
 
+    const normalizedPhone = phone.replace(/\s+/g, "");
+
+    if (!/^\+255[67]\d{8}$/.test(normalizedPhone)) {
+      setError(
+        "Please enter a valid Tanzanian phone number, e.g. +255 693 275 058.",
+      );
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const result = await signIn("credentials", {
-        phone: phone.trim(),
+        phone: normalizedPhone,
         password,
         mfaCode: useRecoveryCode ? "" : mfaCode.trim(),
         recoveryCode: useRecoveryCode ? recoveryCode.trim() : "",
@@ -109,14 +133,19 @@ export default function AdminLoginPage() {
                     id="phone"
                     name="phone"
                     type="tel"
+                    inputMode="tel"
                     autoComplete="tel"
                     value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
+                    onChange={(event) => handlePhoneChange(event.target.value)}
                     placeholder="+255 693 275 058"
                     className="scheme-light w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
                     required
                   />
                 </div>
+
+                <p className="mt-1.5 text-xs text-[#999999]">
+                  +255 is already included. Enter the 9 digits after it.
+                </p>
               </div>
 
               {/* Password */}
