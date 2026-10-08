@@ -3,14 +3,28 @@
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LockKeyhole, LogIn, Mail, Utensils } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  LockKeyhole,
+  LogIn,
+  Phone,
+  ShieldCheck,
+  Utensils,
+} from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,21 +36,24 @@ export default function AdminLoginPage() {
 
     try {
       const result = await signIn("credentials", {
-        email,
+        phone: phone.trim(),
         password,
+        mfaCode: useRecoveryCode ? "" : mfaCode.trim(),
+        recoveryCode: useRecoveryCode ? recoveryCode.trim() : "",
         redirect: false,
       });
 
-      console.log("SIGN IN RESULT:", result);
-
       if (result?.error) {
-        setError("Invalid email or password.");
+        setError(
+          "Unable to sign in. Check your phone number, password, and MFA code.",
+        );
         setIsLoading(false);
         return;
       }
 
       if (result?.ok) {
         router.push("/admin/dashboard");
+        router.refresh();
         return;
       }
 
@@ -76,31 +93,33 @@ export default function AdminLoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Phone */}
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="phone"
                   className="mb-2 block text-sm font-semibold text-[#1F1F1F]"
                 >
-                  Email Address
+                  Phone Number
                 </label>
 
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
+                  <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
 
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="admin@example.com"
-                    className="[color-scheme:light] w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="+255 693 275 058"
+                    className="scheme-light w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
                     required
                   />
                 </div>
               </div>
 
+              {/* Password */}
               <div>
                 <label
                   htmlFor="password"
@@ -120,7 +139,7 @@ export default function AdminLoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter your password"
-                    className="[color-scheme:light] w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-12 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    className="scheme-light w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-12 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
                     required
                   />
 
@@ -141,12 +160,92 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
+              {/* MFA */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label
+                    htmlFor={useRecoveryCode ? "recoveryCode" : "mfaCode"}
+                    className="block text-sm font-semibold text-[#1F1F1F]"
+                  >
+                    {useRecoveryCode ? "Recovery Code" : "Authenticator Code"}
+                  </label>
+
+                  <ShieldCheck className="h-4 w-4 text-[#D41B27]" />
+                </div>
+
+                {!useRecoveryCode ? (
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
+
+                    <input
+                      id="mfaCode"
+                      name="mfaCode"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={mfaCode}
+                      onChange={(event) =>
+                        setMfaCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6),
+                        )
+                      }
+                      placeholder="6-digit code"
+                      className="scheme-light w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm tracking-[0.25em] text-[#1F1F1F] outline-none transition placeholder:tracking-normal placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
+
+                    <input
+                      id="recoveryCode"
+                      name="recoveryCode"
+                      type="text"
+                      autoComplete="off"
+                      maxLength={19}
+                      value={recoveryCode}
+                      onChange={(event) =>
+                        setRecoveryCode(
+                          event.target.value
+                            .toUpperCase()
+                            .replace(/[^A-F0-9-]/g, "")
+                            .slice(0, 19),
+                        )
+                      }
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
+                      className="scheme-light w-full rounded-xl border border-[#EEEEEE] bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-sm tracking-wider text-[#1F1F1F] outline-none transition placeholder:tracking-normal placeholder:text-[#AAAAAA] focus:border-[#D41B27] focus:bg-white"
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseRecoveryCode((value) => !value);
+                    setMfaCode("");
+                    setRecoveryCode("");
+                  }}
+                  className="mt-2 cursor-pointer text-xs font-semibold text-[#D41B27] hover:text-[#B91621]"
+                >
+                  {useRecoveryCode
+                    ? "Use authenticator code instead"
+                    : "Use a recovery code instead"}
+                </button>
+
+                <p className="mt-2 text-xs leading-5 text-[#999999]">
+                  MFA is required after your account is enrolled.
+                </p>
+              </div>
+
+              {/* Error */}
               {error && (
                 <div className="rounded-xl bg-[#FDEBEC] px-4 py-3">
                   <p className="text-sm font-medium text-[#B91621]">{error}</p>
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -164,6 +263,7 @@ export default function AdminLoginPage() {
 
                 <p className="text-xs leading-5 text-[#777777]">
                   This area is restricted to authorized restaurant staff.
+                  Multi-factor authentication protects every staff account.
                 </p>
               </div>
             </div>

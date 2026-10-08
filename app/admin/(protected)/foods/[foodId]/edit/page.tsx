@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
+
 import EditFoodForm from "./EditFoodForm";
 
 type PageProps = {
@@ -10,6 +12,8 @@ type PageProps = {
 };
 
 export default async function EditFoodPage({ params }: PageProps) {
+  await requirePermission("products.update");
+
   const { foodId } = await params;
 
   const [food, categories] = await Promise.all([

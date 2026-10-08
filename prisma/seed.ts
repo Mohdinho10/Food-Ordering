@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -18,359 +19,417 @@ const prisma = new PrismaClient({
   adapter,
 });
 
+// ============================================
+// PERMISSIONS
+// ============================================
+
+const permissions = [
+  {
+    name: "dashboard.view",
+    description: "View the admin dashboard",
+  },
+
+  {
+    name: "orders.view",
+    description: "View orders",
+  },
+  {
+    name: "orders.update",
+    description: "Update order status and information",
+  },
+  {
+    name: "orders.cancel",
+    description: "Cancel orders",
+  },
+
+  {
+    name: "products.view",
+    description: "View products",
+  },
+  {
+    name: "products.create",
+    description: "Create products",
+  },
+  {
+    name: "products.update",
+    description: "Update products",
+  },
+  {
+    name: "products.delete",
+    description: "Delete products",
+  },
+
+  {
+    name: "categories.view",
+    description: "View categories",
+  },
+  {
+    name: "categories.create",
+    description: "Create categories",
+  },
+  {
+    name: "categories.update",
+    description: "Update categories",
+  },
+  {
+    name: "categories.delete",
+    description: "Delete categories",
+  },
+
+  {
+    name: "reports.view",
+    description: "View reports",
+  },
+
+  {
+    name: "users.view",
+    description: "View users",
+  },
+  {
+    name: "users.create",
+    description: "Create users",
+  },
+  {
+    name: "users.update",
+    description: "Update users",
+  },
+  {
+    name: "users.suspend",
+    description: "Suspend or activate users",
+  },
+  {
+    name: "users.delete",
+    description: "Permanently delete users",
+  },
+
+  {
+    name: "audit_logs.view",
+    description: "View audit logs",
+  },
+
+  {
+    name: "settings.view",
+    description: "View restaurant settings",
+  },
+  {
+    name: "settings.manage",
+    description: "Manage restaurant settings",
+  },
+
+  {
+    name: "security.manage",
+    description: "Manage security and MFA settings",
+  },
+];
+
+// ============================================
+// MAIN
+// ============================================
+
 async function main() {
   console.log("🌱 Starting database seed...");
+  console.log("");
 
-  // =========================
-  // CLEAR EXISTING DATA
-  // =========================
+  // ============================================
+  // PERMISSIONS
+  // ============================================
 
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.category.deleteMany();
+  console.log("Creating permissions...");
 
-  // =========================
-  // CATEGORIES
-  // =========================
+  const permissionRecords = [];
 
-  const burgers = await prisma.category.create({
-    data: {
-      name: "Burgers",
+  for (const permission of permissions) {
+    const record = await prisma.permission.upsert({
+      where: {
+        name: permission.name,
+      },
+      update: {
+        description: permission.description,
+      },
+      create: permission,
+    });
+
+    permissionRecords.push(record);
+  }
+
+  console.log(`✓ ${permissionRecords.length} permissions ready`);
+  console.log("");
+
+  // ============================================
+  // ROLES
+  // ============================================
+
+  console.log("Creating roles...");
+
+  const ownerRole = await prisma.role.upsert({
+    where: {
+      name: "OWNER",
+    },
+    update: {
+      description: "Full access to the restaurant system",
+    },
+    create: {
+      name: "OWNER",
+      description: "Full access to the restaurant system",
     },
   });
 
-  const pizza = await prisma.category.create({
-    data: {
-      name: "Pizza",
+  const managerRole = await prisma.role.upsert({
+    where: {
+      name: "MANAGER",
+    },
+    update: {
+      description: "Manage restaurant operations and staff",
+    },
+    create: {
+      name: "MANAGER",
+      description: "Manage restaurant operations and staff",
     },
   });
 
-  const chicken = await prisma.category.create({
-    data: {
-      name: "Chicken",
+  const staffRole = await prisma.role.upsert({
+    where: {
+      name: "STAFF",
+    },
+    update: {
+      description: "Handle day-to-day restaurant operations",
+    },
+    create: {
+      name: "STAFF",
+      description: "Handle day-to-day restaurant operations",
     },
   });
 
-  const waffles = await prisma.category.create({
-    data: {
-      name: "Waffles",
+  console.log("✓ OWNER role ready");
+  console.log("✓ MANAGER role ready");
+  console.log("✓ STAFF role ready");
+  console.log("");
+
+  // ============================================
+  // OWNER PERMISSIONS
+  // ============================================
+
+  console.log("Assigning OWNER permissions...");
+
+  // OWNER receives every permission, including users.delete.
+  for (const permission of permissionRecords) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: ownerRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: ownerRole.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+
+  console.log("✓ OWNER permissions assigned");
+
+  // ============================================
+  // MANAGER PERMISSIONS
+  // ============================================
+
+  console.log("Assigning MANAGER permissions...");
+
+  const managerPermissions = [
+    "dashboard.view",
+
+    "orders.view",
+    "orders.update",
+    "orders.cancel",
+
+    "products.view",
+    "products.create",
+    "products.update",
+    "products.delete",
+
+    "categories.view",
+    "categories.create",
+    "categories.update",
+    "categories.delete",
+
+    "reports.view",
+
+    "users.view",
+    "users.create",
+    "users.update",
+    "users.suspend",
+
+    "audit_logs.view",
+
+    "settings.view",
+  ];
+
+  for (const permissionName of managerPermissions) {
+    const permission = permissionRecords.find(
+      (item) => item.name === permissionName,
+    );
+
+    if (!permission) {
+      throw new Error(
+        `Permission "${permissionName}" was not found during seeding.`,
+      );
+    }
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: managerRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: managerRole.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+
+  console.log("✓ MANAGER permissions assigned");
+
+  // ============================================
+  // STAFF PERMISSIONS
+  // ============================================
+
+  console.log("Assigning STAFF permissions...");
+
+  const staffPermissions = ["dashboard.view", "orders.view", "orders.update"];
+
+  for (const permissionName of staffPermissions) {
+    const permission = permissionRecords.find(
+      (item) => item.name === permissionName,
+    );
+
+    if (!permission) {
+      throw new Error(
+        `Permission "${permissionName}" was not found during seeding.`,
+      );
+    }
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: staffRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: staffRole.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+
+  console.log("✓ STAFF permissions assigned");
+  console.log("");
+
+  // ============================================
+  // OWNER ACCOUNT
+  // ============================================
+
+  console.log("Creating/updating OWNER account...");
+
+  const passwordHash = await bcrypt.hash("mohd1234", 12);
+
+  const existingOwner = await prisma.user.findFirst({
+    where: {
+      OR: [
+        {
+          phone: "+255693275058",
+        },
+        {
+          email: "owner@bellavista.local",
+        },
+      ],
     },
   });
 
-  const desserts = await prisma.category.create({
-    data: {
-      name: "Desserts",
-    },
-  });
+  if (existingOwner) {
+    await prisma.user.update({
+      where: {
+        id: existingOwner.id,
+      },
+      data: {
+        name: "Muhammad Abubakar",
+        phone: "+255693275058",
 
-  const drinks = await prisma.category.create({
-    data: {
-      name: "Drinks",
-    },
-  });
+        // Temporary compatibility with the old authentication system
+        password: passwordHash,
 
-  const sides = await prisma.category.create({
-    data: {
-      name: "Sides",
-    },
-  });
+        // New authentication system
+        passwordHash,
 
-  // =========================
-  // BURGERS
-  // =========================
+        roleId: ownerRole.id,
+        status: "ACTIVE",
+        mustChangePassword: false,
+      },
+    });
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Beef Burger",
-        description:
-          "Juicy grilled beef patty served with fresh lettuce, tomato, onions and our special sauce.",
-        price: 15000,
-        image: "/images/beef-burger.png",
-        categoryId: burgers.id,
-      },
-      {
-        name: "Chicken Burger",
-        description:
-          "Crispy chicken fillet with fresh lettuce, tomato and creamy house sauce.",
-        price: 17000,
-        image: "/images/chicken-burger.png",
-        categoryId: burgers.id,
-      },
-      {
-        name: "Fish Burger",
-        description:
-          "Crispy seasoned fish fillet with fresh vegetables and our signature sauce.",
-        price: 18000,
-        image: "/images/fish-burger.png",
-        categoryId: burgers.id,
-      },
-    ],
-  });
+    console.log("✓ Existing user converted to OWNER");
+  } else {
+    await prisma.user.create({
+      data: {
+        name: "Muhammad Abubakar",
 
-  // =========================
-  // PIZZA
-  // =========================
+        // Temporary compatibility with the old authentication system
+        email: "owner@bellavista.local",
+        password: passwordHash,
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Margherita Pizza",
-        description:
-          "Classic pizza topped with tomato sauce, mozzarella cheese and fresh herbs.",
-        price: 25000,
-        image: "/images/margherita-pizza.png",
-        categoryId: pizza.id,
-      },
-      {
-        name: "Mexican Pizza",
-        description:
-          "Flavorful pizza topped with seasoned meat, vegetables, cheese and a spicy Mexican-style sauce.",
-        price: 30000,
-        image: "/images/mexican-pizza.png",
-        categoryId: pizza.id,
-      },
-      {
-        name: "Pepperoni Pizza",
-        description:
-          "Classic cheesy pizza loaded with pepperoni and rich tomato sauce.",
-        price: 32000,
-        image: "/images/pepperoni-pizza.png",
-        categoryId: pizza.id,
-      },
-      {
-        name: "Chili Pizza",
-        description:
-          "A delicious spicy pizza with rich tomato sauce, cheese and chili toppings.",
-        price: 28000,
-        image: "/images/chili-pizza.png",
-        categoryId: pizza.id,
-      },
-    ],
-  });
+        // New authentication system
+        phone: "+255693275058",
+        passwordHash,
 
-  // =========================
-  // CHICKEN
-  // =========================
+        roleId: ownerRole.id,
+        status: "ACTIVE",
+        mustChangePassword: false,
+      },
+    });
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Crispy Chicken",
-        description:
-          "Golden crispy chicken prepared with our special seasoning.",
-        price: 18000,
-        image: "/images/crispy-chicken.png",
-        categoryId: chicken.id,
-      },
-      {
-        name: "Chicken Wings",
-        description:
-          "Crispy chicken wings seasoned and cooked until perfectly golden.",
-        price: 18000,
-        image: "/images/chicken-wings.png",
-        categoryId: chicken.id,
-      },
-      {
-        name: "Chicken Fingers",
-        description:
-          "Tender strips of chicken coated in a crispy golden breading.",
-        price: 17000,
-        image: "/images/chicken-fingers.png",
-        categoryId: chicken.id,
-      },
-    ],
-  });
+    console.log("✓ OWNER account created");
+  }
 
-  // =========================
-  // WAFFLES
-  // =========================
+  console.log("");
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Banana Waffle",
-        description:
-          "Warm crispy waffle served with fresh banana and delicious toppings.",
-        price: 16000,
-        image: "/images/waffle-banana.png",
-        categoryId: waffles.id,
-      },
-      {
-        name: "Strawberry Waffle",
-        description:
-          "Freshly prepared waffle served with strawberries and sweet toppings.",
-        price: 17000,
-        image: "/images/waffle-strawberry.png",
-        categoryId: waffles.id,
-      },
-      {
-        name: "Plain Waffle",
-        description:
-          "Freshly prepared golden waffle with a light, crispy outside and soft center.",
-        price: 12000,
-        image: "/images/waffle-plain.png",
-        categoryId: waffles.id,
-      },
-    ],
-  });
-
-  // =========================
-  // DESSERTS
-  // =========================
-
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Chocolate Cone",
-        description: "Creamy chocolate ice cream served in a crispy cone.",
-        price: 8000,
-        image: "/images/chocolate-cone.png",
-        categoryId: desserts.id,
-      },
-      {
-        name: "Lotus Cone",
-        description:
-          "Creamy ice cream with delicious Lotus biscuit flavor served in a cone.",
-        price: 9000,
-        image: "/images/lotus-cone.png",
-        categoryId: desserts.id,
-      },
-      {
-        name: "Mixed Cone",
-        description:
-          "A delicious combination of creamy ice cream flavors served in a crispy cone.",
-        price: 9000,
-        image: "/images/mix-cone.png",
-        categoryId: desserts.id,
-      },
-      {
-        name: "Strawberry Cone",
-        description: "Sweet strawberry ice cream served in a crispy cone.",
-        price: 8000,
-        image: "/images/strawberry-cone.png",
-        categoryId: desserts.id,
-      },
-    ],
-  });
-
-  // =========================
-  // DRINKS
-  // =========================
-
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "Banana Shake",
-        description:
-          "Creamy and refreshing banana shake prepared with fresh bananas.",
-        price: 10000,
-        image: "/images/banana-shake.png",
-        categoryId: drinks.id,
-      },
-      {
-        name: "Chocolate Shake",
-        description:
-          "Rich and creamy chocolate milkshake with a delicious chocolate flavor.",
-        price: 10000,
-        image: "/images/chocolate-shake.png",
-        categoryId: drinks.id,
-      },
-      {
-        name: "Mixed Shake",
-        description: "A creamy mixed-flavor shake made for a refreshing treat.",
-        price: 11000,
-        image: "/images/mix-shake.png",
-        categoryId: drinks.id,
-      },
-      {
-        name: "Lemon Mojito",
-        description: "Refreshing lemon mojito with a bright citrus flavor.",
-        price: 8000,
-        image: "/images/lemon-mojito.png",
-        categoryId: drinks.id,
-      },
-      {
-        name: "Orange Mojito",
-        description:
-          "Refreshing orange mojito with a sweet and citrusy flavor.",
-        price: 8000,
-        image: "/images/orange-mojito.png",
-        categoryId: drinks.id,
-      },
-      {
-        name: "Strawberry Mojito",
-        description:
-          "Refreshing strawberry mojito made with sweet strawberry flavor.",
-        price: 9000,
-        image: "/images/strawberry-mojito.png",
-        categoryId: drinks.id,
-      },
-    ],
-  });
-
-  // =========================
-  // SIDES
-  // =========================
-
-  await prisma.product.createMany({
-    data: [
-      {
-        name: "French Fries",
-        description: "Golden crispy fries seasoned and served hot.",
-        price: 7000,
-        image: "/images/french-fries.png",
-        categoryId: sides.id,
-      },
-      {
-        name: "Loaded Fries",
-        description:
-          "Crispy golden fries topped with delicious sauces and savory toppings.",
-        price: 12000,
-        image: "/images/loaded-fries.png",
-        categoryId: sides.id,
-      },
-      {
-        name: "Cheese Fries",
-        description:
-          "Golden crispy fries generously topped with melted cheese and our special sauce.",
-        price: 10000,
-        image: "/images/cheese-fries.png",
-        categoryId: sides.id,
-      },
-      {
-        name: "Onion Rings",
-        description:
-          "Crispy golden onion rings served with a delicious dipping sauce.",
-        price: 10000,
-        image: "/images/onion-rings.png",
-        categoryId: sides.id,
-      },
-      {
-        name: "Potato Wedges",
-        description:
-          "Seasoned potato wedges baked until golden and crispy on the outside.",
-        price: 9000,
-        image: "/images/potato-wedges.png",
-        categoryId: sides.id,
-      },
-    ],
-  });
-
-  // =========================
+  // ============================================
   // SUMMARY
-  // =========================
+  // ============================================
 
-  const categoryCount = await prisma.category.count();
-  const productCount = await prisma.product.count();
+  console.log("============================================");
+  console.log("🌱 DATABASE SEED COMPLETED");
+  console.log("============================================");
+  console.log("");
 
-  console.log("================================");
-  console.log("✅ Database seeded successfully!");
-  console.log(`📁 Categories: ${categoryCount}`);
-  console.log(`🍔 Products: ${productCount}`);
-  console.log("================================");
+  console.log("Owner:");
+  console.log("Name: Muhammad Abubakar");
+  console.log("Phone: +255693275058");
+  console.log("Role: OWNER");
+  console.log("");
+
+  console.log("Development password: mohd1234");
+  console.log("");
+
+  console.log("Roles:");
+  console.log("- OWNER");
+  console.log("- MANAGER");
+  console.log("- STAFF");
+  console.log("");
+
+  console.log(`Permissions: ${permissionRecords.length}`);
+  console.log("");
+
+  console.log("============================================");
 }
+
+// ============================================
+// RUN
+// ============================================
 
 main()
   .catch((error) => {

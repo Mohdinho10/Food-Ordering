@@ -1,4 +1,5 @@
 import { auth } from "@/app/auth";
+import { getCurrentUserPermissions } from "@/app/lib/authorization";
 import { redirect } from "next/navigation";
 import { UtensilsCrossed } from "lucide-react";
 
@@ -10,9 +11,25 @@ export default async function AdminLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
 
+  // User must be authenticated.
   if (!session?.user) {
     redirect("/admin/login");
   }
+
+  // MFA must be completed before accessing any admin page.
+  if (!session.user.mfaEnabled) {
+    redirect("/mfa/setup");
+  }
+
+  if (!session.user.mfaVerified) {
+    redirect("/admin/login");
+  }
+
+  // Load permissions from the database.
+  //
+  // We deliberately do not store permissions in the JWT.
+  // The database remains the source of truth.
+  const permissions = await getCurrentUserPermissions();
 
   return (
     <div className="min-h-screen bg-[#F7F7F7] text-[#1F1F1F]">
@@ -34,7 +51,7 @@ export default async function AdminLayout({
         </div>
 
         {/* Desktop Navigation */}
-        <AdminNav />
+        <AdminNav permissions={permissions} />
 
         {/* Bottom */}
         <div className="border-t border-[#EEEEEE] p-4">
@@ -60,8 +77,20 @@ export default async function AdminLayout({
             </p>
           </div>
 
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDEBEC] text-sm font-bold text-[#D41B27]">
-            {session.user.name?.charAt(0).toUpperCase() || "A"}
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-xs font-semibold text-[#1F1F1F]">
+                {session.user.name || "Admin"}
+              </p>
+
+              <p className="text-[11px] text-[#999999]">
+                {session.user.role || "STAFF"}
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDEBEC] text-sm font-bold text-[#D41B27]">
+              {session.user.name?.charAt(0).toUpperCase() || "A"}
+            </div>
           </div>
         </header>
 
@@ -72,7 +101,7 @@ export default async function AdminLayout({
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileAdminNav />
+      <MobileAdminNav permissions={permissions} />
     </div>
   );
 }

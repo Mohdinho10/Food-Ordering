@@ -4,6 +4,7 @@ import Ably from "ably";
 import { auth } from "@/app/auth";
 import { prisma } from "@/app/lib/prisma";
 import cloudinary from "@/app/lib/cloudinary";
+import { requirePermission } from "@/app/lib/authorization";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -32,8 +33,6 @@ function extractCloudinaryPublicId(imageUrl: string) {
 
     let publicId = url.pathname.slice(uploadIndex + "/upload/".length);
 
-    // Remove transformation segments such as:
-    // /c_limit,w_1200,h_1200,q_auto,f_auto/
     const parts = publicId.split("/");
 
     const versionIndex = parts.findIndex((part) => /^v\d+$/.test(part));
@@ -42,7 +41,6 @@ function extractCloudinaryPublicId(imageUrl: string) {
       publicId = parts.slice(versionIndex + 1).join("/");
     }
 
-    // Remove file extension.
     publicId = publicId.replace(/\.[^/.]+$/, "");
 
     return publicId || null;
@@ -99,7 +97,6 @@ async function publishFoodEvent(
 
     console.log(`Realtime ${event} event published:`, foodId);
   } catch (error) {
-    // Realtime failure should never make the database operation fail.
     console.error(`Ably ${event} error:`, error);
   }
 }
@@ -109,6 +106,8 @@ async function publishFoodEvent(
 // ----------------------------------------
 
 export async function createFood(formData: FormData) {
+  await requirePermission("products.create");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -123,10 +122,6 @@ export async function createFood(formData: FormData) {
   const priceValue = String(formData.get("price") || "").trim();
   const categoryId = String(formData.get("categoryId") || "").trim();
   const image = formData.get("image");
-
-  // -------------------------
-  // Basic validation
-  // -------------------------
 
   if (!name) {
     return {
@@ -165,10 +160,6 @@ export async function createFood(formData: FormData) {
     };
   }
 
-  // -------------------------
-  // Verify category
-  // -------------------------
-
   const category = await prisma.category.findUnique({
     where: {
       id: categoryId,
@@ -184,10 +175,6 @@ export async function createFood(formData: FormData) {
       error: "Selected category does not exist.",
     };
   }
-
-  // -------------------------
-  // Validate image
-  // -------------------------
 
   if (!(image instanceof File) || image.size === 0) {
     return {
@@ -211,10 +198,6 @@ export async function createFood(formData: FormData) {
   }
 
   try {
-    // -------------------------
-    // Upload image to Cloudinary
-    // -------------------------
-
     const arrayBuffer = await image.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -250,10 +233,6 @@ export async function createFood(formData: FormData) {
       uploadStream.end(buffer);
     });
 
-    // -------------------------
-    // Create food
-    // -------------------------
-
     const food = await prisma.product.create({
       data: {
         name,
@@ -269,10 +248,6 @@ export async function createFood(formData: FormData) {
     });
 
     revalidatePath("/admin/foods");
-
-    // -------------------------
-    // Realtime event
-    // -------------------------
 
     await publishFoodEvent("food.created", food.id);
   } catch (error) {
@@ -292,6 +267,8 @@ export async function createFood(formData: FormData) {
 // ----------------------------------------
 
 export async function updateFood(foodId: string, formData: FormData) {
+  await requirePermission("products.update");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -300,10 +277,6 @@ export async function updateFood(foodId: string, formData: FormData) {
       error: "Unauthorized.",
     };
   }
-
-  // -------------------------
-  // Find existing food
-  // -------------------------
 
   const existingFood = await prisma.product.findUnique({
     where: {
@@ -327,10 +300,6 @@ export async function updateFood(foodId: string, formData: FormData) {
   const priceValue = String(formData.get("price") || "").trim();
   const categoryId = String(formData.get("categoryId") || "").trim();
   const image = formData.get("image");
-
-  // -------------------------
-  // Basic validation
-  // -------------------------
 
   if (!name) {
     return {
@@ -369,10 +338,6 @@ export async function updateFood(foodId: string, formData: FormData) {
     };
   }
 
-  // -------------------------
-  // Verify category
-  // -------------------------
-
   const category = await prisma.category.findUnique({
     where: {
       id: categoryId,
@@ -388,11 +353,6 @@ export async function updateFood(foodId: string, formData: FormData) {
       error: "Selected category does not exist.",
     };
   }
-
-  // -------------------------
-  // Check whether a new image
-  // was uploaded
-  // -------------------------
 
   const hasNewImage = image instanceof File && image.size > 0;
 
@@ -414,10 +374,6 @@ export async function updateFood(foodId: string, formData: FormData) {
 
   try {
     let imageUrl = existingFood.image;
-
-    // -------------------------
-    // Upload new image
-    // -------------------------
 
     if (hasNewImage) {
       const arrayBuffer = await image.arrayBuffer();
@@ -458,10 +414,6 @@ export async function updateFood(foodId: string, formData: FormData) {
       imageUrl = uploadResult.secure_url;
     }
 
-    // -------------------------
-    // Update food
-    // -------------------------
-
     await prisma.product.update({
       where: {
         id: foodId,
@@ -475,22 +427,12 @@ export async function updateFood(foodId: string, formData: FormData) {
       },
     });
 
-    // -------------------------
-    // Delete old image
-    // only after database update
-    // succeeds
-    // -------------------------
-
     if (hasNewImage && existingFood.image) {
       await deleteCloudinaryImage(existingFood.image);
     }
 
     revalidatePath("/admin/foods");
     revalidatePath(`/admin/foods/${foodId}/edit`);
-
-    // -------------------------
-    // Realtime event
-    // -------------------------
 
     await publishFoodEvent("food.updated", foodId);
   } catch (error) {
@@ -513,6 +455,8 @@ export async function updateFoodAvailability(
   foodId: string,
   available: boolean,
 ) {
+  await requirePermission("products.update");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -521,10 +465,6 @@ export async function updateFoodAvailability(
       error: "Unauthorized.",
     };
   }
-
-  // -------------------------
-  // Verify food
-  // -------------------------
 
   const food = await prisma.product.findUnique({
     where: {
@@ -542,10 +482,6 @@ export async function updateFoodAvailability(
     };
   }
 
-  // -------------------------
-  // Update availability
-  // -------------------------
-
   try {
     await prisma.product.update({
       where: {
@@ -557,10 +493,6 @@ export async function updateFoodAvailability(
     });
 
     revalidatePath("/admin/foods");
-
-    // -------------------------
-    // Realtime event
-    // -------------------------
 
     await publishFoodEvent("food.updated", foodId);
 
@@ -582,6 +514,8 @@ export async function updateFoodAvailability(
 // ----------------------------------------
 
 export async function deleteFood(foodId: string) {
+  await requirePermission("products.delete");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -590,11 +524,6 @@ export async function deleteFood(foodId: string) {
       error: "Unauthorized.",
     };
   }
-
-  // -------------------------
-  // Find food and check
-  // whether it has been ordered
-  // -------------------------
 
   const food = await prisma.product.findUnique({
     where: {
@@ -619,10 +548,6 @@ export async function deleteFood(foodId: string) {
     };
   }
 
-  // -------------------------
-  // Protect historical orders
-  // -------------------------
-
   if (food._count.orderItems > 0) {
     return {
       success: false,
@@ -632,29 +557,17 @@ export async function deleteFood(foodId: string) {
   }
 
   try {
-    // -------------------------
-    // Delete food from database
-    // -------------------------
-
     await prisma.product.delete({
       where: {
         id: foodId,
       },
     });
 
-    // -------------------------
-    // Delete image from Cloudinary
-    // -------------------------
-
     if (food.image) {
       await deleteCloudinaryImage(food.image);
     }
 
     revalidatePath("/admin/foods");
-
-    // -------------------------
-    // Realtime event
-    // -------------------------
 
     await publishFoodEvent("food.deleted", foodId);
 

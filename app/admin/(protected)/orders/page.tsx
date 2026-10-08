@@ -7,7 +7,10 @@ import {
   PackageCheck,
   UtensilsCrossed,
 } from "lucide-react";
+
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
+
 import OrdersFilters from "./OrderFilters";
 import OrdersRealtimeListener from "./OrdersRealtimeListener";
 
@@ -38,6 +41,10 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  // ==================== AUTHORIZATION ====================
+
+  await requirePermission("orders.view");
+
   const params = await searchParams;
 
   const status = params.status;
@@ -497,7 +504,6 @@ export default async function AdminOrdersPage({
                       key={order.id}
                       className="transition hover:bg-[#FAFAFA]"
                     >
-                      {/* Order */}
                       <td className="px-6 py-4">
                         <p className="text-xs font-semibold text-[#1F1F1F]">
                           #{order.id.slice(-6).toUpperCase()}
@@ -508,7 +514,6 @@ export default async function AdminOrdersPage({
                         </p>
                       </td>
 
-                      {/* Customer */}
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-semibold text-[#1F1F1F]">
@@ -521,14 +526,12 @@ export default async function AdminOrdersPage({
                         </div>
                       </td>
 
-                      {/* Type */}
                       <td className="px-6 py-4">
                         <span className="text-xs font-medium text-[#666666]">
                           {getOrderTypeLabel(order.orderType)}
                         </span>
                       </td>
 
-                      {/* Items */}
                       <td className="px-6 py-4">
                         <span className="text-xs font-medium text-[#666666]">
                           {order.items.reduce(
@@ -538,14 +541,12 @@ export default async function AdminOrdersPage({
                         </span>
                       </td>
 
-                      {/* Total */}
                       <td className="px-6 py-4">
                         <span className="text-sm font-semibold text-[#1F1F1F]">
                           {formatCurrency(Number(order.total))}
                         </span>
                       </td>
 
-                      {/* Status */}
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${getStatusStyles(
@@ -556,7 +557,6 @@ export default async function AdminOrdersPage({
                         </span>
                       </td>
 
-                      {/* Action */}
                       <td className="px-6 py-4 text-right">
                         <Link
                           href={`/admin/orders/${order.id}`}

@@ -27,9 +27,17 @@ type Category = {
 
 type Props = {
   categories: Category[];
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 };
 
-export default function CategoryManager({ categories }: Props) {
+export default function CategoryManager({
+  categories,
+  canCreate,
+  canUpdate,
+  canDelete,
+}: Props) {
   const [isPending, startTransition] = useTransition();
 
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -49,6 +57,8 @@ export default function CategoryManager({ categories }: Props) {
   }
 
   function handleCreate() {
+    if (!canCreate) return;
+
     clearMessages();
 
     startTransition(async () => {
@@ -65,6 +75,8 @@ export default function CategoryManager({ categories }: Props) {
   }
 
   function startEditing(category: Category) {
+    if (!canUpdate) return;
+
     clearMessages();
 
     setEditingId(category.id);
@@ -77,7 +89,7 @@ export default function CategoryManager({ categories }: Props) {
   }
 
   function handleUpdate() {
-    if (!editingId) return;
+    if (!canUpdate || !editingId) return;
 
     clearMessages();
 
@@ -96,6 +108,8 @@ export default function CategoryManager({ categories }: Props) {
   }
 
   function openDeleteModal(category: Category) {
+    if (!canDelete) return;
+
     clearMessages();
     setDeleteCategoryTarget(category);
   }
@@ -107,7 +121,7 @@ export default function CategoryManager({ categories }: Props) {
   }
 
   function handleDelete() {
-    if (!deleteCategoryTarget) return;
+    if (!canDelete || !deleteCategoryTarget) return;
 
     const category = deleteCategoryTarget;
 
@@ -154,48 +168,50 @@ export default function CategoryManager({ categories }: Props) {
     <>
       <div className="space-y-6">
         {/* Add Category */}
-        <section className="overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white">
-          <div className="border-b border-[#EEEEEE] px-6 py-5">
-            <h2 className="text-sm font-bold text-[#1F1F1F]">Add Category</h2>
+        {canCreate && (
+          <section className="overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white">
+            <div className="border-b border-[#EEEEEE] px-6 py-5">
+              <h2 className="text-sm font-bold text-[#1F1F1F]">Add Category</h2>
 
-            <p className="mt-1 text-xs text-[#999999]">
-              Create a category for organizing your restaurant foods.
-            </p>
-          </div>
-
-          <div className="p-6">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    handleCreate();
-                  }
-                }}
-                maxLength={50}
-                placeholder="e.g. Salads"
-                disabled={isPending}
-                className="w-full rounded-xl border border-[#EEEEEE] bg-white px-4 py-3 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] disabled:cursor-not-allowed disabled:bg-[#FAFAFA]"
-              />
-
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={isPending || !newCategoryName.trim()}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                Add
-              </button>
+              <p className="mt-1 text-xs text-[#999999]">
+                Create a category for organizing your restaurant foods.
+              </p>
             </div>
-          </div>
-        </section>
+
+            <div className="p-6">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(event) => setNewCategoryName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleCreate();
+                    }
+                  }}
+                  maxLength={50}
+                  placeholder="e.g. Salads"
+                  disabled={isPending}
+                  className="w-full rounded-xl border border-[#EEEEEE] bg-white px-4 py-3 text-sm text-[#1F1F1F] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#D41B27] disabled:cursor-not-allowed disabled:bg-[#FAFAFA]"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={isPending || !newCategoryName.trim()}
+                  className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  Add
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Messages */}
         {error && (
@@ -252,7 +268,9 @@ export default function CategoryManager({ categories }: Props) {
               </h3>
 
               <p className="mt-1.5 text-sm text-[#999999]">
-                Create your first category above.
+                {canCreate
+                  ? "Create your first category above."
+                  : "No categories have been created yet."}
               </p>
             </div>
           ) : (
@@ -327,27 +345,33 @@ export default function CategoryManager({ categories }: Props) {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEditing(category)}
-                            disabled={isPending}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
+                        {(canUpdate || canDelete) && (
+                          <div className="flex items-center gap-2">
+                            {canUpdate && (
+                              <button
+                                type="button"
+                                onClick={() => startEditing(category)}
+                                disabled={isPending}
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                Edit
+                              </button>
+                            )}
 
-                          <button
-                            type="button"
-                            onClick={() => openDeleteModal(category)}
-                            disabled={isPending}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#B91621] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        </div>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={() => openDeleteModal(category)}
+                                disabled={isPending}
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#B91621] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -359,7 +383,7 @@ export default function CategoryManager({ categories }: Props) {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {deleteCategoryTarget && (
+      {deleteCategoryTarget && canDelete && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
           onMouseDown={(event) => {

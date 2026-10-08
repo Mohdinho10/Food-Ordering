@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
+
 import AvailabilityToggle from "./AvailabilityToggle";
 import DeleteFoodButton from "./DeleteFoodButton";
 import FoodsRealtimeListener from "./FoodsRealtimeListener";
@@ -27,10 +29,22 @@ function formatCurrency(value: unknown) {
 }
 
 export default async function FoodsPage({ searchParams }: PageProps) {
+  const user = await requirePermission("products.view");
+
   const params = await searchParams;
 
   const search = params.search?.trim() || "";
   const categoryId = params.category || "ALL";
+
+  const permissions =
+    user.role?.permissions.map(
+      (rolePermission) => rolePermission.permission.name,
+    ) ?? [];
+
+  const canCreate = permissions.includes("products.create");
+  const canUpdate = permissions.includes("products.update");
+  const canDelete = permissions.includes("products.delete");
+  const canViewCategories = permissions.includes("categories.view");
 
   const categories = await prisma.category.findMany({
     orderBy: {
@@ -112,23 +126,29 @@ export default async function FoodsPage({ searchParams }: PageProps) {
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <Link
-            href="/admin/foods/categories"
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#EEEEEE] bg-white px-5 py-3 text-sm font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] sm:w-auto"
-          >
-            <Settings2 className="h-4 w-4" />
-            Manage Categories
-          </Link>
+        {(canViewCategories || canCreate) && (
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            {canViewCategories && (
+              <Link
+                href="/admin/foods/categories"
+                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#EEEEEE] bg-white px-5 py-3 text-sm font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27] sm:w-auto"
+              >
+                <Settings2 className="h-4 w-4" />
+                Manage Categories
+              </Link>
+            )}
 
-          <Link
-            href="/admin/foods/new"
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621] sm:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            Add Food
-          </Link>
-        </div>
+            {canCreate && (
+              <Link
+                href="/admin/foods/new"
+                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621] sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Add Food
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Statistics */}
@@ -270,7 +290,6 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        {/* Food Image */}
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] ring-1 ring-black/5">
                           {food.image ? (
                             <Image
@@ -316,26 +335,32 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                     </td>
 
                     <td className="px-6 py-4">
-                      <AvailabilityToggle
-                        foodId={food.id}
-                        initialAvailable={food.available}
-                      />
+                      {canUpdate && (
+                        <AvailabilityToggle
+                          foodId={food.id}
+                          initialAvailable={food.available}
+                        />
+                      )}
                     </td>
 
                     <td className="px-6 py-4">
                       <div className="flex items-start justify-end gap-2">
-                        <Link
-                          href={`/admin/foods/${food.id}/edit`}
-                          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                          Edit
-                        </Link>
+                        {canUpdate && (
+                          <Link
+                            href={`/admin/foods/${food.id}/edit`}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            Edit
+                          </Link>
+                        )}
 
-                        <DeleteFoodButton
-                          foodId={food.id}
-                          foodName={food.name}
-                        />
+                        {canDelete && (
+                          <DeleteFoodButton
+                            foodId={food.id}
+                            foodName={food.name}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -343,7 +368,10 @@ export default async function FoodsPage({ searchParams }: PageProps) {
               </tbody>
             </table>
           ) : (
-            <EmptyState hasFilters={Boolean(search || categoryId !== "ALL")} />
+            <EmptyState
+              hasFilters={Boolean(search || categoryId !== "ALL")}
+              canCreate={canCreate}
+            />
           )}
         </div>
 
@@ -353,7 +381,6 @@ export default async function FoodsPage({ searchParams }: PageProps) {
             foods.map((food) => (
               <div key={food.id} className="group p-5">
                 <div className="flex gap-4">
-                  {/* Food Image */}
                   <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F7] ring-1 ring-black/5">
                     {food.image ? (
                       <Image
@@ -390,24 +417,30 @@ export default async function FoodsPage({ searchParams }: PageProps) {
                     </div>
 
                     <div className="mt-4 flex items-start justify-between gap-3">
-                      <AvailabilityToggle
-                        foodId={food.id}
-                        initialAvailable={food.available}
-                      />
+                      {canUpdate && (
+                        <AvailabilityToggle
+                          foodId={food.id}
+                          initialAvailable={food.available}
+                        />
+                      )}
 
                       <div className="flex flex-wrap items-start justify-end gap-2">
-                        <Link
-                          href={`/admin/foods/${food.id}/edit`}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                          Edit
-                        </Link>
+                        {canUpdate && (
+                          <Link
+                            href={`/admin/foods/${food.id}/edit`}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC] hover:text-[#D41B27]"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            Edit
+                          </Link>
+                        )}
 
-                        <DeleteFoodButton
-                          foodId={food.id}
-                          foodName={food.name}
-                        />
+                        {canDelete && (
+                          <DeleteFoodButton
+                            foodId={food.id}
+                            foodName={food.name}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -415,7 +448,10 @@ export default async function FoodsPage({ searchParams }: PageProps) {
               </div>
             ))
           ) : (
-            <EmptyState hasFilters={Boolean(search || categoryId !== "ALL")} />
+            <EmptyState
+              hasFilters={Boolean(search || categoryId !== "ALL")}
+              canCreate={canCreate}
+            />
           )}
         </div>
       </section>
@@ -423,7 +459,13 @@ export default async function FoodsPage({ searchParams }: PageProps) {
   );
 }
 
-function EmptyState({ hasFilters }: { hasFilters: boolean }) {
+function EmptyState({
+  hasFilters,
+  canCreate,
+}: {
+  hasFilters: boolean;
+  canCreate: boolean;
+}) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDEBEC]">
@@ -440,7 +482,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
           : "Start building your restaurant menu by adding your first food item."}
       </p>
 
-      {!hasFilters && (
+      {!hasFilters && canCreate && (
         <Link
           href="/admin/foods/new"
           className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#D41B27] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91621]"

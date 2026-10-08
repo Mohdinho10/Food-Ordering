@@ -2,6 +2,7 @@
 
 import { auth } from "@/app/auth";
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
 import { revalidatePath } from "next/cache";
 
 function formatCategoryName(name: string) {
@@ -12,7 +13,13 @@ function formatCategoryName(name: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+// ----------------------------------------
+// Create Category
+// ----------------------------------------
+
 export async function createCategory(name: string) {
+  await requirePermission("categories.create");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -80,7 +87,13 @@ export async function createCategory(name: string) {
   }
 }
 
+// ----------------------------------------
+// Update Category
+// ----------------------------------------
+
 export async function updateCategory(categoryId: string, name: string) {
+  await requirePermission("categories.update");
+
   const session = await auth();
 
   if (!session?.user) {
@@ -170,7 +183,13 @@ export async function updateCategory(categoryId: string, name: string) {
   }
 }
 
+// ----------------------------------------
+// Delete Category
+// ----------------------------------------
+
 export async function deleteCategory(categoryId: string) {
+  await requirePermission("categories.delete");
+
   const session = await auth();
 
   if (!session?.user) {

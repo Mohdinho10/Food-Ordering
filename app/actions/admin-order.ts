@@ -1,8 +1,8 @@
 "use server";
 
 import Ably from "ably";
-import { auth } from "@/app/auth";
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
 import { revalidatePath } from "next/cache";
 import { OrderStatus, PaymentStatus } from "../generated/prisma/browser";
 
@@ -50,16 +50,9 @@ async function publishOrderUpdated(orderId: string) {
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  // ==================== AUTHENTICATION ====================
+  // ==================== AUTHORIZATION ====================
 
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      success: false,
-      error: "Unauthorized.",
-    };
-  }
+  await requirePermission("orders.update");
 
   // ==================== VALIDATE STATUS ====================
 
@@ -114,16 +107,9 @@ export async function updatePaymentStatus(
   orderId: string,
   paymentStatus: PaymentStatus,
 ) {
-  // ==================== AUTHENTICATION ====================
+  // ==================== AUTHORIZATION ====================
 
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      success: false,
-      error: "Unauthorized.",
-    };
-  }
+  await requirePermission("orders.update");
 
   // ==================== VALIDATE PAYMENT STATUS ====================
 

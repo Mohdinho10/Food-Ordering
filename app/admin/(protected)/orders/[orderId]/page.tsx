@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
 
 import OrderRealtimeListener from "./OrderRealtimeListener";
 import OrderStatusControl from "./OrderStatusControl";
@@ -127,6 +128,10 @@ function getPaymentStatusClasses(status: string) {
 }
 
 export default async function OrderDetailsPage({ params }: PageProps) {
+  // ==================== AUTHORIZATION ====================
+
+  const user = await requirePermission("orders.view");
+
   const { orderId } = await params;
 
   const order = await prisma.order.findUnique({
@@ -150,6 +155,13 @@ export default async function OrderDetailsPage({ params }: PageProps) {
   if (!order) {
     notFound();
   }
+
+  const permissions =
+    user.role?.permissions.map(
+      (rolePermission) => rolePermission.permission.name,
+    ) ?? [];
+
+  const canUpdate = permissions.includes("orders.update");
 
   const totalItems = order.items.reduce(
     (total, item) => total + item.quantity,
@@ -369,7 +381,12 @@ export default async function OrderDetailsPage({ params }: PageProps) {
         {/* Right Column */}
         <div className="space-y-6">
           {/* Order Status */}
-          <OrderStatusControl orderId={order.id} currentStatus={order.status} />
+          {canUpdate && (
+            <OrderStatusControl
+              orderId={order.id}
+              currentStatus={order.status}
+            />
+          )}
 
           {/* Order Information */}
           <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
@@ -481,12 +498,14 @@ export default async function OrderDetailsPage({ params }: PageProps) {
             </div>
 
             {/* Payment Status Control */}
-            <div className="mt-5 border-t border-[#EEEEEE] pt-5">
-              <PaymentStatusControl
-                orderId={order.id}
-                currentStatus={order.paymentStatus}
-              />
-            </div>
+            {canUpdate && (
+              <div className="mt-5 border-t border-[#EEEEEE] pt-5">
+                <PaymentStatusControl
+                  orderId={order.id}
+                  currentStatus={order.paymentStatus}
+                />
+              </div>
+            )}
           </section>
 
           {/* Order ID */}

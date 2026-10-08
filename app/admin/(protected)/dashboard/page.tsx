@@ -7,15 +7,33 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
+
 import { prisma } from "@/app/lib/prisma";
+import { requirePermission } from "@/app/lib/authorization";
 import DashboardRealtimeListener from "./DashboardRealtimeListener";
 
 export default async function AdminDashboardPage() {
+  // ==================== AUTHORIZATION ====================
+
+  const user = await requirePermission("dashboard.view");
+
+  const permissions =
+    user.role?.permissions.map(
+      (rolePermission) => rolePermission.permission.name,
+    ) ?? [];
+
+  const canViewOrders = permissions.includes("orders.view");
+  const canViewProducts = permissions.includes("products.view");
+
+  // ==================== DATE RANGE ====================
+
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
+
+  // ==================== FETCH DASHBOARD DATA ====================
 
   const [totalOrders, pendingOrders, todayOrders, todayRevenue, recentOrders] =
     await Promise.all([
@@ -70,6 +88,8 @@ export default async function AdminDashboardPage() {
     ]);
 
   const revenue = todayRevenue._sum.total ? Number(todayRevenue._sum.total) : 0;
+
+  // ==================== FORMATTERS ====================
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-TZ", {
@@ -256,13 +276,15 @@ export default async function AdminDashboardPage() {
               </p>
             </div>
 
-            <Link
-              href="/admin/orders"
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#D41B27] transition hover:text-[#B91621]"
-            >
-              View All
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {canViewOrders && (
+              <Link
+                href="/admin/orders"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#D41B27] transition hover:text-[#B91621]"
+              >
+                View All
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
 
           {recentOrders.length === 0 ? (
@@ -281,44 +303,82 @@ export default async function AdminDashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-[#EEEEEE]">
-              {recentOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/admin/orders/${order.id}`}
-                  className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#FAFAFA] sm:px-6"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDEBEC] text-xs font-bold text-[#D41B27]">
-                      {order.customerName.charAt(0).toUpperCase()}
+              {recentOrders.map((order) =>
+                canViewOrders ? (
+                  <Link
+                    key={order.id}
+                    href={`/admin/orders/${order.id}`}
+                    className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#FAFAFA] sm:px-6"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDEBEC] text-xs font-bold text-[#D41B27]">
+                        {order.customerName.charAt(0).toUpperCase()}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#1F1F1F]">
+                          {order.customerName}
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-[#999999]">
+                          {getOrderTypeLabel(order.orderType)} ·{" "}
+                          {formatDate(order.createdAt)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#1F1F1F]">
-                        {order.customerName}
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold text-[#1F1F1F]">
+                        {formatCurrency(Number(order.total))}
                       </p>
 
-                      <p className="mt-0.5 text-xs text-[#999999]">
-                        {getOrderTypeLabel(order.orderType)} ·{" "}
-                        {formatDate(order.createdAt)}
+                      <span
+                        className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${getStatusStyles(
+                          order.status,
+                        )}`}
+                      >
+                        {formatStatus(order.status)}
+                      </span>
+                    </div>
+                  </Link>
+                ) : (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FDEBEC] text-xs font-bold text-[#D41B27]">
+                        {order.customerName.charAt(0).toUpperCase()}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#1F1F1F]">
+                          {order.customerName}
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-[#999999]">
+                          {getOrderTypeLabel(order.orderType)} ·{" "}
+                          {formatDate(order.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold text-[#1F1F1F]">
+                        {formatCurrency(Number(order.total))}
                       </p>
+
+                      <span
+                        className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${getStatusStyles(
+                          order.status,
+                        )}`}
+                      >
+                        {formatStatus(order.status)}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-[#1F1F1F]">
-                      {formatCurrency(Number(order.total))}
-                    </p>
-
-                    <span
-                      className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${getStatusStyles(
-                        order.status,
-                      )}`}
-                    >
-                      {formatStatus(order.status)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                ),
+              )}
             </div>
           )}
         </div>
@@ -334,47 +394,51 @@ export default async function AdminDashboardPage() {
           </div>
 
           <div className="mt-5 space-y-3">
-            <Link
-              href="/admin/orders"
-              className="group flex items-center gap-3 rounded-xl border border-[#EEEEEE] p-3 transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC]"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC] transition group-hover:bg-white">
-                <ClipboardList className="h-4 w-4 text-[#D41B27]" />
-              </div>
+            {canViewOrders && (
+              <Link
+                href="/admin/orders"
+                className="group flex items-center gap-3 rounded-xl border border-[#EEEEEE] p-3 transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC]"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC] transition group-hover:bg-white">
+                  <ClipboardList className="h-4 w-4 text-[#D41B27]" />
+                </div>
 
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#1F1F1F]">
-                  Manage Orders
-                </p>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1F1F1F]">
+                    Manage Orders
+                  </p>
 
-                <p className="mt-0.5 text-xs text-[#999999]">
-                  View and update orders
-                </p>
-              </div>
+                  <p className="mt-0.5 text-xs text-[#999999]">
+                    View and update orders
+                  </p>
+                </div>
 
-              <ArrowRight className="h-4 w-4 text-[#AAAAAA] transition group-hover:translate-x-0.5 group-hover:text-[#D41B27]" />
-            </Link>
+                <ArrowRight className="h-4 w-4 text-[#AAAAAA] transition group-hover:translate-x-0.5 group-hover:text-[#D41B27]" />
+              </Link>
+            )}
 
-            <Link
-              href="/admin/foods"
-              className="group flex items-center gap-3 rounded-xl border border-[#EEEEEE] p-3 transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC]"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC] transition group-hover:bg-white">
-                <UtensilsCrossed className="h-4 w-4 text-[#D41B27]" />
-              </div>
+            {canViewProducts && (
+              <Link
+                href="/admin/foods"
+                className="group flex items-center gap-3 rounded-xl border border-[#EEEEEE] p-3 transition hover:border-[#FDEBEC] hover:bg-[#FDEBEC]"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC] transition group-hover:bg-white">
+                  <UtensilsCrossed className="h-4 w-4 text-[#D41B27]" />
+                </div>
 
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#1F1F1F]">
-                  Manage Foods
-                </p>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#1F1F1F]">
+                    Manage Foods
+                  </p>
 
-                <p className="mt-0.5 text-xs text-[#999999]">
-                  Add or update your menu
-                </p>
-              </div>
+                  <p className="mt-0.5 text-xs text-[#999999]">
+                    Add or update your menu
+                  </p>
+                </div>
 
-              <ArrowRight className="h-4 w-4 text-[#AAAAAA] transition group-hover:translate-x-0.5 group-hover:text-[#D41B27]" />
-            </Link>
+                <ArrowRight className="h-4 w-4 text-[#AAAAAA] transition group-hover:translate-x-0.5 group-hover:text-[#D41B27]" />
+              </Link>
+            )}
           </div>
 
           {/* Restaurant Status */}
