@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useCartStore } from "../store/cartStore";
+import PopularItemsRealtimeListener from "./PopularItemsRealtimeListener";
 
 interface Product {
   id: string;
@@ -37,7 +38,12 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
 
   return (
     <div className="bg-[#FAFAFA] text-[#1F1F1F]">
+      {/* ==================== REALTIME ==================== */}
+
+      <PopularItemsRealtimeListener />
+
       {/* ==================== HERO ==================== */}
+
       <section className="relative min-h-155 overflow-hidden">
         <Image
           src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1800&q=85"
@@ -87,10 +93,11 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
       </section>
 
       {/* ==================== POPULAR ITEMS ==================== */}
+
       <section className="bg-white py-20">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D41B27]">
                 Customer Favorites
               </p>
@@ -105,9 +112,11 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
               </p>
             </div>
 
+            {/* VIEW ALL */}
+
             <Link
               href="/menu"
-              className="flex items-center gap-2 text-sm font-semibold text-[#D41B27] hover:text-[#B91621]"
+              className="inline-flex w-fit shrink-0 items-center gap-2 text-sm font-semibold text-[#D41B27] transition hover:text-[#B91621]"
             >
               View All
               <ArrowRight className="h-4 w-4" />
@@ -124,6 +133,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
                   className="group overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.10)]"
                 >
                   {/* PRODUCT IMAGE */}
+
                   <div className="relative aspect-square overflow-hidden bg-[#FAFAFA]">
                     <Image
                       src={item.image}
@@ -135,6 +145,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
                   </div>
 
                   {/* PRODUCT INFORMATION */}
+
                   <div className="p-5">
                     <h3 className="font-semibold">{item.name}</h3>
 
@@ -143,6 +154,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
                     </p>
 
                     {/* PRICE + ADD BUTTON */}
+
                     <div className="mt-4 flex items-center justify-between">
                       <span className="font-bold text-[#D41B27]">
                         TSh {item.price.toLocaleString()}
@@ -166,6 +178,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
                     </div>
 
                     {/* QUANTITY */}
+
                     <div className="mt-3 flex items-center justify-between rounded-full bg-[#FAFAFA] px-3 py-2">
                       <button
                         type="button"
@@ -212,9 +225,11 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
       </section>
 
       {/* ==================== FEATURES ==================== */}
+
       <section className="border-y border-[#EEEEEE] bg-[#FAFAFA] py-16">
         <div className="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 md:grid-cols-3 lg:px-10">
           {/* FRESH & DELICIOUS */}
+
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FDEBEC]">
               <Utensils className="h-5 w-5 text-[#D41B27]" />
@@ -230,6 +245,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
           </div>
 
           {/* FAST DELIVERY */}
+
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FDEBEC]">
               <Bike className="h-5 w-5 text-[#D41B27]" />
@@ -245,6 +261,7 @@ export default function HomeLayout({ popularItems }: HomeClientProps) {
           </div>
 
           {/* QUALITY GUARANTEED */}
+
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FDEBEC]">
               <ShieldCheck className="h-5 w-5 text-[#D41B27]" />
